@@ -4,14 +4,13 @@
 */
 
 import Ember from 'ember-metal/core'; // FEATURES, Logger, assert
-import isEnabled from 'ember-metal/features';
 
 import { get } from 'ember-metal/property_get';
 import { set } from 'ember-metal/property_set';
 import { computed } from 'ember-metal/computed';
 import { deprecatingAlias } from 'ember-metal/computed_macros';
 import { isSimpleClick } from 'ember-views/system/utils';
-import EmberComponent from 'ember-views/views/component';
+import EmberComponent from 'ember-views/components/component';
 import inject from 'ember-runtime/inject';
 import 'ember-runtime/system/service'; // creates inject.service
 import ControllerMixin from 'ember-runtime/mixins/controller';
@@ -19,10 +18,6 @@ import ControllerMixin from 'ember-runtime/mixins/controller';
 import linkToTemplate from 'ember-htmlbars/templates/link-to';
 linkToTemplate.meta.revision = 'Ember@VERSION_STRING_PLACEHOLDER';
 
-var linkComponentClassNameBindings = ['active', 'loading', 'disabled'];
-if (isEnabled('ember-routing-transitioning-classes')) {
-  linkComponentClassNameBindings = ['active', 'loading', 'disabled', 'transitioningIn', 'transitioningOut'];
-}
 
 /**
   `Ember.LinkComponent` renders an element whose `click` event triggers a
@@ -162,7 +157,7 @@ var LinkComponent = EmberComponent.extend({
     @default ['active', 'loading', 'disabled']
     @public
   */
-  classNameBindings: linkComponentClassNameBindings,
+  classNameBindings: ['active', 'loading', 'disabled', 'transitioningIn', 'transitioningOut'],
 
   /**
     By default the `{{link-to}}` helper responds to the `click` event. You
@@ -320,7 +315,7 @@ var LinkComponent = EmberComponent.extend({
     }
 
     var routing = get(this, '_routing');
-    var targetRouteName = get(this, 'targetRouteName');
+    var targetRouteName = this._computeRouteNameWithQueryParams(get(this, 'targetRouteName'));
     var models = get(this, 'models');
     var queryParamValues = get(this, 'queryParams.values');
     var shouldReplace = get(this, 'attrs.replace');
@@ -348,7 +343,7 @@ var LinkComponent = EmberComponent.extend({
 
     if (get(this, 'loading')) { return get(this, 'loadingHref'); }
 
-    targetRouteName = this._handleOnlyQueryParamsSupplied(targetRouteName);
+    targetRouteName = this._computeRouteNameWithQueryParams(targetRouteName);
 
     var routing = get(this, '_routing');
     var queryParams = get(this, 'queryParams.values');
@@ -364,7 +359,7 @@ var LinkComponent = EmberComponent.extend({
     }
   }),
 
-  _handleOnlyQueryParamsSupplied(route) {
+  _computeRouteNameWithQueryParams(route) {
     var params = this.attrs.params.slice();
     var lastParam = params[params.length - 1];
     if (lastParam && lastParam.isQueryParams) {
@@ -448,7 +443,7 @@ var LinkComponent = EmberComponent.extend({
 
     let targetRouteName;
     let models = [];
-    targetRouteName = this._handleOnlyQueryParamsSupplied(params[0]);
+    targetRouteName = this._computeRouteNameWithQueryParams(params[0]);
 
     for (let i = 1; i < params.length; i++) {
       models.push(params[i]);

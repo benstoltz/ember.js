@@ -183,20 +183,6 @@ import isEmpty from 'ember-metal/is_empty';
 import isBlank from 'ember-metal/is_blank';
 import isPresent from 'ember-metal/is_present';
 import Backburner from 'backburner';
-import {
-  isStream,
-  subscribe,
-  unsubscribe,
-  read,
-  readHash,
-  readArray,
-  scanArray,
-  scanHash,
-  concat,
-  chain
-} from 'ember-metal/streams/utils';
-
-import Stream from 'ember-metal/streams/stream';
 
 // END IMPORTS
 
@@ -336,23 +322,6 @@ Ember.isPresent = isPresent;
 
 Ember.merge = merge;
 
-if (isEnabled('ember-metal-stream')) {
-  Ember.stream = {
-    Stream: Stream,
-
-    isStream: isStream,
-    subscribe: subscribe,
-    unsubscribe: unsubscribe,
-    read: read,
-    readHash: readHash,
-    readArray: readArray,
-    scanArray: scanArray,
-    scanHash: scanHash,
-    concat: concat,
-    chain: chain
-  };
-}
-
 Ember.FEATURES = FEATURES;
 Ember.FEATURES.isEnabled = isEnabled;
 
@@ -379,22 +348,6 @@ Ember.FEATURES.isEnabled = isEnabled;
 */
 Ember.onerror = null;
 // END EXPORTS
-
-import {
-  assert,
-  warn,
-  debug,
-  deprecate,
-  deprecateFunc,
-  runInDebug
-} from 'ember-metal/assert';
-
-Ember.assert = assert;
-Ember.warn = warn;
-Ember.debug = debug;
-Ember.deprecate = deprecate;
-Ember.deprecateFunc = deprecateFunc;
-Ember.runInDebug = runInDebug;
 
 // do this for side-effects of updating Ember.assert, warn, etc when
 // ember-debug is present

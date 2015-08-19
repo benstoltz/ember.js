@@ -123,6 +123,20 @@ var librariesRegistered = false;
   });
   ```
 
+  To prevent Ember from setting up a listener for a default event,
+  specify the event name with a `null` value in the `customEvents`
+  property:
+
+  ```javascript
+  var App = Ember.Application.create({
+    customEvents: {
+      // prevent listeners for mouseenter/mouseleave events
+      mouseenter: null,
+      mouseleave: null
+    }
+  });
+  ```
+
   By default, the application sets up these event listeners on the document
   body. However, in cases where you are embedding an Ember application inside
   an existing page, you may want it to set up the listeners on an element
@@ -243,7 +257,11 @@ var Application = Namespace.extend(RegistryProxy, {
     If you would like additional bubbling events to be delegated to your
     views, set your `Ember.Application`'s `customEvents` property
     to a hash containing the DOM event name as the key and the
-    corresponding view method name as the value. For example:
+    corresponding view method name as the value. Setting an event to
+    a value of `null` will prevent a default event listener from being
+    added for that event.
+
+    To add new events to be listened to:
 
     ```javascript
     var App = Ember.Application.create({
@@ -254,6 +272,17 @@ var Application = Namespace.extend(RegistryProxy, {
     });
     ```
 
+    To prevent default events from being listened to:
+
+    ```javascript
+    var App = Ember.Application.create({
+      customEvents: {
+        // remove support for mouseenter / mouseleave events
+        mouseenter: null,
+        mouseleave: null
+      }
+    });
+    ```
     @property customEvents
     @type Object
     @default null
@@ -683,6 +712,69 @@ var Application = Namespace.extend(RegistryProxy, {
 });
 
 Application.reopenClass({
+  /**
+    Instance initializers run after all initializers have run. Because
+    instance initializers run after the app is fully set up. We have access
+    to the store, container, and other items. However, these initializers run
+    after code has loaded and are not allowed to defer readiness.
+
+    Instance initializer receives an object which has the following attributes:
+    `name`, `before`, `after`, `initialize`. The only required attribute is
+    `initialize`, all others are optional.
+
+    * `name` allows you to specify under which name the instanceInitializer is
+    registered. This must be a unique name, as trying to register two
+    instanceInitializer with the same name will result in an error.
+
+    ```javascript
+    Ember.Application.instanceInitializer({
+      name: 'namedinstanceInitializer',
+
+      initialize: function(application) {
+        Ember.debug('Running namedInitializer!');
+      }
+    });
+    ```
+
+    * `before` and `after` are used to ensure that this initializer is ran prior
+    or after the one identified by the value. This value can be a single string
+    or an array of strings, referencing the `name` of other initializers.
+
+    * See Ember.Application.initializer for discussion on the usage of before
+    and after.
+
+    Example instanceInitializer to preload data into the store.
+
+    ```javascript
+    Ember.Application.initializer({
+      name: 'preload-data',
+
+      initialize: function(application) {
+        var userConfig, userConfigEncoded, store;
+        // We have a HTML escaped JSON representation of the user's basic
+        // configuration generated server side and stored in the DOM of the main
+        // index.html file. This allows the app to have access to a set of data
+        // without making any additional remote calls. Good for basic data that is
+        // needed for immediate rendering of the page. Keep in mind, this data,
+        // like all local models and data can be manipulated by the user, so it
+        // should not be relied upon for security or authorization.
+        //
+        // Grab the encoded data from the meta tag
+        userConfigEncoded = Ember.$('head meta[name=app-user-config]').attr('content');
+        // Unescape the text, then parse the resulting JSON into a real object
+        userConfig = JSON.parse(unescape(userConfigEncoded));
+        // Lookup the store
+        store = application.lookup('service:store');
+        // Push the encoded JSON into the store
+        store.pushPayload(userConfig);
+      }
+    });
+    ```
+
+    @method instanceInitializer
+    @param instanceInitializer
+    @public
+  */
   instanceInitializer: buildInitializerMethod('instanceInitializers', 'instance initializer')
 });
 
@@ -728,6 +820,13 @@ Application.reopenClass({
   instanceInitializers: new EmptyObject(),
 
   /**
+    The goal of initializers should be to register dependencies and injections.
+    This phase runs once. Because these initializers may load code, they are
+    allowed to defer application readiness and advance it. If you need to access
+    the container or store you should use an InstanceInitializer that will be run
+    after all initializers and therefore after all code is loaded and the app is
+    ready.
+
     Initializer receives an object which has the following attributes:
     `name`, `before`, `after`, `initialize`. The only required attribute is
     `initialize`, all others are optional.
@@ -836,7 +935,8 @@ Application.reopenClass({
     @method initializer
     @param initializer {Object}
     @public
-   */
+  */
+
   initializer: buildInitializerMethod('initializers', 'initializer'),
 
   /**
@@ -885,7 +985,9 @@ Application.reopenClass({
     registry.register('renderer:-dom', { create() { return new Renderer(new DOMHelper()); } });
 
     registry.injection('view', 'renderer', 'renderer:-dom');
-    registry.register('view:select', SelectView);
+    if (Ember.ENV._ENABLE_LEGACY_VIEW_SUPPORT) {
+      registry.register('view:select', SelectView);
+    }
     registry.register('view:-outlet', OutletView);
 
     registry.register('-view-registry:main', { create() { return {}; } });

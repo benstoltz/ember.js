@@ -123,13 +123,6 @@ export var GUID_DESC = {
   value: null
 };
 
-var undefinedDescriptor = {
-  configurable: true,
-  writable: true,
-  enumerable: false,
-  value: undefined
-};
-
 var nullDescriptor = {
   configurable: true,
   writable: true,
@@ -141,12 +134,6 @@ export var GUID_KEY_PROPERTY = {
   name: GUID_KEY,
   descriptor: nullDescriptor
 };
-
-export var NEXT_SUPER_PROPERTY = {
-  name: '__nextSuper',
-  descriptor: undefinedDescriptor
-};
-
 
 /**
   Generates a new guid, optionally saving the guid to the object that you
@@ -267,6 +254,31 @@ export function guidFor(obj) {
 }
 
 
+const checkHasSuper = (function () {
+  let sourceAvailable = (function() {
+    return this;
+  }).toString().indexOf('return this;') > -1;
+
+  if (sourceAvailable) {
+    return function checkHasSuper(func) {
+      return func.toString().indexOf('_super') > -1;
+    };
+  }
+
+  return function checkHasSuper() {
+    return true;
+  };
+}());
+
+function ROOT() {}
+ROOT.__hasSuper = false;
+
+function hasSuper(func) {
+  if (func.__hasSuper === undefined) {
+    func.__hasSuper = checkHasSuper(func);
+  }
+  return func.__hasSuper;
+}
 
 /**
   Wraps the passed function so that `this._super` will point to the superFunc
@@ -280,35 +292,41 @@ export function guidFor(obj) {
   @param {Function} superFunc The super function.
   @return {Function} wrapped function.
 */
-
 export function wrap(func, superFunc) {
+  if (!hasSuper(func)) {
+    return func;
+  }
+  // ensure an unwrapped super that calls _super is wrapped with a terminal _super
+  if (!superFunc.wrappedFunction && hasSuper(superFunc)) {
+    return _wrap(func, _wrap(superFunc, ROOT));
+  }
+  return _wrap(func, superFunc);
+}
+
+function _wrap(func, superFunc) {
   function superWrapper() {
-    var ret;
-    var sup  = this && this.__nextSuper;
-    var length = arguments.length;
-
-    if (this) {
-      this.__nextSuper = superFunc;
+    let orig = this._super;
+    let length = arguments.length;
+    let ret;
+    this._super = superFunc;
+    switch (length) {
+      case 0:  ret = func.call(this); break;
+      case 1:  ret = func.call(this, arguments[0]); break;
+      case 2:  ret = func.call(this, arguments[0], arguments[1]); break;
+      case 3:  ret = func.call(this, arguments[0], arguments[1], arguments[2]); break;
+      case 4:  ret = func.call(this, arguments[0], arguments[1], arguments[2], arguments[3]); break;
+      case 5:  ret = func.call(this, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4]); break;
+      default:
+        // v8 bug potentially incorrectly deopts this function: https://code.google.com/p/v8/issues/detail?id=3709
+        // we may want to keep this around till this ages out on mobile
+        let args = new Array(length);
+        for (var x = 0; x < length; x++) {
+          args[x] = arguments[x];
+        }
+        ret = func.apply(this, args);
+        break;
     }
-
-    if (length === 0) {
-      ret = func.call(this);
-    } else if (length === 1) {
-      ret = func.call(this, arguments[0]);
-    } else if (length === 2) {
-      ret = func.call(this, arguments[0], arguments[1]);
-    } else {
-      var args = new Array(length);
-      for (var i = 0; i < length; i++) {
-        args[i] = arguments[i];
-      }
-      ret = apply(this, func, args);
-    }
-
-    if (this) {
-      this.__nextSuper = sup;
-    }
-
+    this._super = orig;
     return ret;
   }
 

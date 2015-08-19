@@ -1,5 +1,4 @@
 import _Ember from 'ember-metal';
-import isEnabled from 'ember-metal/features';
 import environment from 'ember-metal/environment';
 
 import { hooks } from 'htmlbars-runtime';
@@ -29,7 +28,6 @@ import lookupHelper from 'ember-htmlbars/hooks/lookup-helper';
 import hasHelper from 'ember-htmlbars/hooks/has-helper';
 import invokeHelper from 'ember-htmlbars/hooks/invoke-helper';
 import element from 'ember-htmlbars/hooks/element';
-import attributes from 'ember-htmlbars/hooks/attributes';
 
 import helpers from 'ember-htmlbars/helpers';
 import keywords, { registerKeyword } from 'ember-htmlbars/keywords';
@@ -63,8 +61,7 @@ merge(emberHooks, {
   lookupHelper,
   hasHelper,
   invokeHelper,
-  element,
-  attributes
+  element
 });
 
 import debuggerKeyword from 'ember-htmlbars/keywords/debugger';
@@ -91,20 +88,18 @@ registerKeyword('component', componentKeyword);
 registerKeyword('partial', partial);
 registerKeyword('input', input);
 registerKeyword('textarea', textarea);
-registerKeyword('collection', collection);
 registerKeyword('legacy-yield', legacyYield);
 registerKeyword('mut', mut);
 registerKeyword('@mut', privateMut);
 registerKeyword('each', each);
 registerKeyword('readonly', readonly);
+registerKeyword('get', getKeyword);
 
 if (_Ember.ENV._ENABLE_LEGACY_VIEW_SUPPORT) {
+  registerKeyword('collection', collection);
   registerKeyword('view', view);
 }
 
-if (isEnabled('ember-htmlbars-get-helper')) {
-  registerKeyword('get', getKeyword);
-}
 
 export default {
   hooks: emberHooks,
