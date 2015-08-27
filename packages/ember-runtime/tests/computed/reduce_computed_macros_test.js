@@ -20,6 +20,7 @@ import {
   union,
   intersect
 } from 'ember-runtime/computed/reduce_computed_macros';
+import { isArray } from 'ember-runtime/utils';
 
 var obj;
 QUnit.module('map', {
@@ -1089,6 +1090,17 @@ QUnit.test('property paths in sort properties update the sorted array', function
   deepEqual(obj.get('sortedPeople'), [cersei, jaime, sansa], 'array is sorted correctly');
 });
 
+QUnit.test('if the dependentKey is neither an array nor object, it will return an empty array', () => {
+  set(obj, 'items', null);
+  ok(isArray(obj.get('sortedItems')), 'returns an empty arrays');
+
+  set(obj, 'array', undefined);
+  ok(isArray(obj.get('sortedItems')), 'returns an empty arrays');
+
+  set(obj, 'array', 'not an array');
+  ok(isArray(obj.get('sortedItems')), 'returns an empty arrays');
+});
+
 function sortByLnameFname(a, b) {
   var lna = get(a, 'lname');
   var lnb = get(b, 'lname');
@@ -1499,6 +1511,17 @@ QUnit.test('sum is readOnly', function() {
 });
 QUnit.test('sums the values in the dependentKey', function() {
   equal(obj.get('total'), 6, 'sums the values');
+});
+
+QUnit.test('if the dependentKey is neither an array nor object, it will return `0`', () => {
+  set(obj, 'array', null);
+  equal(get(obj, 'total'), 0, 'returns 0');
+
+  set(obj, 'array', undefined);
+  equal(get(obj, 'total'), 0, 'returns 0');
+
+  set(obj, 'array', 'not an array');
+  equal(get(obj, 'total'), 0, 'returns 0');
 });
 
 QUnit.test('updates when array is modified', function() {

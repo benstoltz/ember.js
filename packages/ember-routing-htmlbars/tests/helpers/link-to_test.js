@@ -8,7 +8,7 @@ import { Registry } from 'ember-runtime/system/container';
 import { runAppend, runDestroy } from 'ember-runtime/tests/utils';
 import EmberObject from 'ember-runtime/system/object';
 import ComponentLookup from 'ember-views/component_lookup';
-import LinkComponent from 'ember-routing-views/views/link';
+import LinkComponent from 'ember-routing-views/components/link-to';
 
 var view;
 var container;
@@ -28,7 +28,8 @@ registry.register('service:-routing', EmberObject.extend({
 }));
 
 registry.register('component-lookup:main', ComponentLookup);
-registry.register('component:-link-to', LinkComponent);
+registry.register('component:link-to', LinkComponent);
+registry.register('component:custom-link-to', LinkComponent.extend());
 
 QUnit.module('ember-routing-htmlbars: link-to helper', {
   setup() {
@@ -103,6 +104,18 @@ QUnit.test('escaped inline form (double curlies) escapes link title', function()
   equal(view.$('b').length, 0, 'no <b> were found');
 });
 
+QUnit.test('escaped inline form with (-html-safe) does not escape link title', function() {
+  view = EmberView.create({
+    title: '<b>blah</b>',
+    template: compile('{{link-to (-html-safe view.title)}}'),
+    container: container
+  });
+
+  runAppend(view);
+
+  equal(view.$('b').length, 1, '<b> was found');
+});
+
 QUnit.test('unescaped inline form (triple curlies) does not escape link title', function() {
   view = EmberView.create({
     title: '<b>blah</b>',
@@ -132,4 +145,16 @@ QUnit.test('unwraps controllers', function() {
   }, /Providing `{{link-to}}` with a param that is wrapped in a controller is deprecated./);
 
   equal(view.$().text(), 'Text');
+});
+
+QUnit.test('able to safely extend the built-in component and use the normal path', function() {
+  view = EmberView.create({
+    title: 'my custom link-to component',
+    template: compile('{{custom-link-to view.title}}'),
+    container: container
+  });
+
+  runAppend(view);
+
+  equal(view.$().text(), 'my custom link-to component', 'rendered a custom-link-to component');
 });

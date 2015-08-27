@@ -2,10 +2,10 @@
 @module ember
 @submodule ember-runtime
 */
-import Ember from 'ember-metal/core';
+
+import { assert, deprecate } from 'ember-metal/debug';
 import { Mixin } from 'ember-metal/mixin';
 import { get } from 'ember-metal/property_get';
-import { deprecateProperty } from 'ember-metal/deprecate_property';
 
 /**
   `Ember.ActionHandler` is available on some familiar classes including
@@ -181,9 +181,27 @@ var ActionHandler = Mixin.create({
     }
 
     if (target = get(this, 'target')) {
-      Ember.assert('The `target` for ' + this + ' (' + target +
-                   ') does not have a `send` method', typeof target.send === 'function');
+      assert(
+        'The `target` for ' + this + ' (' + target +
+        ') does not have a `send` method',
+        typeof target.send === 'function'
+      );
       target.send(...arguments);
+    }
+  },
+
+  willMergeMixin(props) {
+    assert('Specifying `_actions` and `actions` in the same mixin is not supported.', !props.actions || !props._actions);
+
+    if (props._actions) {
+      deprecate(
+        'Specifying actions in `_actions` is deprecated, please use `actions` instead.',
+        false,
+        { id: 'ember-runtime.action-handler-_actions', until: '3.0.0' }
+      );
+
+      props.actions = props._actions;
+      delete props._actions;
     }
   }
 });
@@ -191,7 +209,19 @@ var ActionHandler = Mixin.create({
 export default ActionHandler;
 
 export function deprecateUnderscoreActions(factory) {
-  deprecateProperty(factory.prototype, '_actions', 'actions', {
-    id: 'ember-runtime.action-handler-_actions', until: '3.0.0'
+  Object.defineProperty(factory.prototype, '_actions', {
+    configurable: true,
+    enumerable: false,
+    set(value) {
+      assert(`You cannot set \`_actions\` on ${this}, please use \`actions\` instead.`);
+    },
+    get() {
+      deprecate(
+        `Usage of \`_actions\` is deprecated, use \`actions\` instead.`,
+        false,
+        { id: 'ember-runtime.action-handler-_actions', until: '3.0.0' }
+      );
+      return get(this, 'actions');
+    }
   });
 }

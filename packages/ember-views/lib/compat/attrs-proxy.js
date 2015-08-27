@@ -97,7 +97,7 @@ let AttrsProxyMixin = {
     if (attrs && key in attrs) {
       // do not deprecate accessing `this[key]` at this time.
       // add this back when we have a proper migration path
-      // Ember.deprecate(deprecation(key), { id: 'ember-views.', until: '3.0.0' });
+      // deprecate(deprecation(key), { id: 'ember-views.', until: '3.0.0' });
       let possibleCell = attrs[key];
 
       if (possibleCell && possibleCell[MUTABLE_CELL]) {
@@ -117,8 +117,8 @@ AttrsProxyMixin[PROPERTY_DID_CHANGE] = function(key) {
   if (this._isAngleBracket) { return; }
   if (this._isDispatchingAttrs) { return; }
 
-  if (this.currentState) {
-    this.currentState.legacyPropertyDidChange(this, key);
+  if (this._currentState) {
+    this._currentState.legacyPropertyDidChange(this, key);
   }
 };
 

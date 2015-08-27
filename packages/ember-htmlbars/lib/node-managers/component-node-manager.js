@@ -1,16 +1,19 @@
-import Ember from 'ember-metal/core';
+import { assert, warn, runInDebug } from 'ember-metal/debug';
 import assign from 'ember-metal/assign';
 import buildComponentTemplate from 'ember-views/system/build-component-template';
 import getCellOrValue from 'ember-htmlbars/hooks/get-cell-or-value';
 import { get } from 'ember-metal/property_get';
 import { set } from 'ember-metal/property_set';
-import setProperties from 'ember-metal/set_properties';
 import { MUTABLE_CELL } from 'ember-views/compat/attrs-proxy';
 import { instrument } from 'ember-htmlbars/system/instrumentation-support';
 import LegacyEmberComponent from 'ember-views/components/component';
 import GlimmerComponent from 'ember-htmlbars/glimmer-component';
 import Stream from 'ember-metal/streams/stream';
 import { readArray } from 'ember-metal/streams/utils';
+import { symbol } from 'ember-metal/utils';
+
+// These symbols will be used to limit link-to's public API surface area.
+export let HAS_BLOCK = symbol('HAS_BLOCK');
 
 // In theory this should come through the env, but it should
 // be safe to import this until we make the hook system public
@@ -45,7 +48,10 @@ ComponentNodeManager.create = function(renderNode, env, options) {
 
   component = component || (isAngleBracket ? GlimmerComponent : LegacyEmberComponent);
 
-  let createOptions = { parentView };
+  let createOptions = {
+    parentView,
+    [HAS_BLOCK]: !!templates.default
+  };
 
   configureTagName(attrs, tagName, component, isAngleBracket, createOptions);
 
@@ -65,14 +71,12 @@ ComponentNodeManager.create = function(renderNode, env, options) {
   // Instantiate the component
   component = createComponent(component, isAngleBracket, createOptions, renderNode, env, attrs);
 
-  // If the component specifies its template via the `layout properties
-  // instead of using the template looked up in the container, get them
+  // If the component specifies its layout via the `layout` property
+  // instead of using the template looked up in the container, get it
   // now that we have the component instance.
   layout = get(component, 'layout') || layout;
 
-  Ember.runInDebug(() => {
-    var assert = Ember.assert;
-
+  runInDebug(() => {
     if (isAngleBracket) {
       assert(`You cannot invoke the '${tagName}' component with angle brackets, because it's a subclass of Component. Please upgrade to GlimmerComponent. Alternatively, you can invoke as '{{${tagName}}}'.`, component.isGlimmerComponent);
     } else {
@@ -218,11 +222,6 @@ ComponentNodeManager.prototype.rerender = function(_env, attrs, visitor) {
 
     if (component._renderNode.shouldReceiveAttrs) {
       env.renderer.componentUpdateAttrs(component, snapshot);
-
-      if (!component._isAngleBracket) {
-        setProperties(component, mergeBindings({}, shadowedAttrs(component, snapshot)));
-      }
-
       component._renderNode.shouldReceiveAttrs = false;
     }
 
@@ -261,7 +260,7 @@ export function createComponent(_component, isAngleBracket, _props, renderNode, 
   if (!isAngleBracket) {
     let proto = _component.proto();
 
-    Ember.assert('controller= is no longer supported', !('controller' in attrs));
+    assert('controller= is no longer supported', !('controller' in attrs));
 
     mergeBindings(props, shadowedAttrs(proto, snapshot));
   } else {
@@ -299,7 +298,7 @@ function shadowedAttrs(target, attrs) {
   for (var attr in attrs) {
     if (attr in target) {
       // TODO: Should we issue a deprecation here?
-      //Ember.deprecate(deprecation(attr));
+      // deprecate(deprecation(attr));
       shadowed[attr] = attrs[attr];
     }
   }
@@ -325,7 +324,7 @@ function mergeBindings(target, attrs) {
     // set `"blah"` to the root of the target because
     // that would replace all attrs with `attrs.attrs`
     if (prop === 'attrs') {
-      Ember.warn(`Invoking a component with a hash attribute named \`attrs\` is not supported. Please refactor usage of ${target} to avoid passing \`attrs\` as a hash parameter.`, false, { id: 'ember-htmlbars.component-unsupported-attrs' });
+      warn(`Invoking a component with a hash attribute named \`attrs\` is not supported. Please refactor usage of ${target} to avoid passing \`attrs\` as a hash parameter.`, false, { id: 'ember-htmlbars.component-unsupported-attrs' });
       continue;
     }
     let value = attrs[prop];

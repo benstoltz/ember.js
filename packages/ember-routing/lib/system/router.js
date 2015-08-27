@@ -1,4 +1,5 @@
-import Ember from 'ember-metal/core'; // FEATURES, Logger, assert
+import Ember from 'ember-metal/core';
+import { assert, info } from 'ember-metal/debug';
 import EmberError from 'ember-metal/error';
 import { get } from 'ember-metal/property_get';
 import { set } from 'ember-metal/property_set';
@@ -48,10 +49,12 @@ var EmberRouter = EmberObject.extend(Evented, {
 
     The following location types are currently available:
 
-    * `auto`
-    * `hash`
-    * `history`
-    * `none`
+    * `history` - use the browser's history API to make the URLs look just like any standard URL
+    * `hash` - use `#` to separate the server part of the URL from the Ember part: `/blog/#/posts/new`
+    * `none` - do not store the Ember URL in the actual browser URL (mainly used for testing)
+    * `auto` - use the best option based on browser capabilites: `history` if possible, then `hash` if possible, otherwise `none`
+
+    Note: If using ember-cli, this value is defaulted to `auto` by the `locationType` setting of `/config/environment.js`
 
     @property location
     @default 'hash'
@@ -430,7 +433,7 @@ var EmberRouter = EmberObject.extend(Evented, {
   },
 
   _connectActiveComponentNode(templateName, componentNode) {
-    Ember.assert('cannot connect an activeView that already exists', !this._activeViews[templateName]);
+    assert('cannot connect an activeView that already exists', !this._activeViews[templateName]);
 
     var _activeViews = this._activeViews;
     function disconnectActiveView() {
@@ -500,7 +503,7 @@ var EmberRouter = EmberObject.extend(Evented, {
         handler = container.lookup(routeName);
 
         if (get(this, 'namespace.LOG_ACTIVE_GENERATION')) {
-          Ember.Logger.info(`generated -> ${routeName}`, { fullName: routeName });
+          info(`generated -> ${routeName}`, { fullName: routeName });
         }
       }
 
@@ -561,7 +564,7 @@ var EmberRouter = EmberObject.extend(Evented, {
 
     for (var key in groupedByUrlKey) {
       var qps = groupedByUrlKey[key];
-      Ember.assert(`You're not allowed to have more than one controller property map to the same query param key, but both \`${qps[0].qp.scopedPropertyName}\` and \`${qps[1] ? qps[1].qp.scopedPropertyName : ''}\` map to \`${qps[0].qp.urlKey}\`. You can fix this by mapping one of the controller properties to a different query param key via the \`as\` config option, e.g. \`${qps[0].qp.prop}: { as: \'other-${qps[0].qp.prop}\' }\``, qps.length <= 1);
+      assert(`You're not allowed to have more than one controller property map to the same query param key, but both \`${qps[0].qp.scopedPropertyName}\` and \`${qps[1] ? qps[1].qp.scopedPropertyName : ''}\` map to \`${qps[0].qp.urlKey}\`. You can fix this by mapping one of the controller properties to a different query param key via the \`as\` config option, e.g. \`${qps[0].qp.prop}: { as: \'other-${qps[0].qp.prop}\' }\``, qps.length <= 1);
       var qp = qps[0].qp;
       queryParams[qp.urlKey] = qp.route.serializeQueryParam(qps[0].value, qp.urlKey, qp.type);
     }
@@ -586,7 +589,7 @@ var EmberRouter = EmberObject.extend(Evented, {
 
   _doTransition(_targetRouteName, models, _queryParams) {
     var targetRouteName = _targetRouteName || getActiveTargetName(this.router);
-    Ember.assert(`The route ${targetRouteName} was not found`, targetRouteName && this.router.hasRoute(targetRouteName));
+    assert(`The route ${targetRouteName} was not found`, targetRouteName && this.router.hasRoute(targetRouteName));
 
     var queryParams = {};
     merge(queryParams, _queryParams);
@@ -1105,7 +1108,7 @@ function appendOrphan(liveRoutes, into, myState) {
   Ember.run.schedule('afterRender', function() {
     // `wasUsed` gets set by the render helper. See the function
     // `impersonateAnOutlet`.
-    Ember.assert('You attempted to render into \'' + into + '\' but it was not found',
+    assert('You attempted to render into \'' + into + '\' but it was not found',
                  liveRoutes.outlets.__ember_orphans__.outlets[into].wasUsed);
   });
 }

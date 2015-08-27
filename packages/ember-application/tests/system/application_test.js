@@ -13,6 +13,8 @@ import EmberRoute from 'ember-routing/system/route';
 import jQuery from 'ember-views/system/jquery';
 import compile from 'ember-template-compiler/system/compile';
 import { _loaded } from 'ember-runtime/system/lazy_load';
+import isEnabled from 'ember-metal/features';
+import { getDebugFunction, setDebugFunction } from 'ember-metal/debug';
 
 var trim = jQuery.trim;
 
@@ -21,7 +23,7 @@ var app, application, originalLookup, originalDebug;
 QUnit.module('Ember.Application', {
   setup() {
     originalLookup = Ember.lookup;
-    originalDebug = Ember.debug;
+    originalDebug = getDebugFunction('debug');
 
     jQuery('#qunit-fixture').html('<div id=\'one\'><div id=\'one-child\'>HI</div></div><div id=\'two\'>HI</div>');
     run(function() {
@@ -31,7 +33,7 @@ QUnit.module('Ember.Application', {
 
   teardown() {
     jQuery('#qunit-fixture').empty();
-    Ember.debug = originalDebug;
+    setDebugFunction('debug', originalDebug);
 
     Ember.lookup = originalLookup;
 
@@ -97,6 +99,22 @@ QUnit.test('acts like a namespace', function() {
   app.Foo = EmberObject.extend();
   equal(app.Foo.toString(), 'TestApp.Foo', 'Classes pick up their parent namespace');
 });
+
+if (isEnabled('ember-registry-container-reform')) {
+  QUnit.test('includes deprecated access to `application.registry`', function() {
+    expect(3);
+
+    ok(typeof application.registry.register === 'function', '#registry.register is available as a function');
+
+    application.__registry__.register = function() {
+      ok(true, '#register alias is called correctly');
+    };
+
+    expectDeprecation(function() {
+      application.registry.register();
+    }, /Using `Application.registry.register` is deprecated. Please use `Application.register` instead./);
+  });
+}
 
 QUnit.module('Ember.Application initialization', {
   teardown() {
@@ -240,14 +258,13 @@ QUnit.test('enable log of libraries with an ENV var', function() {
     return;
   }
 
-  var debug = Ember.debug;
   var messages = [];
 
   Ember.LOG_VERSION = true;
 
-  Ember.debug = function(message) {
+  setDebugFunction('debug', function(message) {
     messages.push(message);
-  };
+  });
 
   Ember.libraries.register('my-lib', '2.0.0a');
 
@@ -263,7 +280,6 @@ QUnit.test('enable log of libraries with an ENV var', function() {
 
   Ember.libraries.deRegister('my-lib');
   Ember.LOG_VERSION = false;
-  Ember.debug = debug;
 });
 
 QUnit.test('disable log version of libraries with an ENV var', function() {
@@ -271,9 +287,9 @@ QUnit.test('disable log version of libraries with an ENV var', function() {
 
   Ember.LOG_VERSION = false;
 
-  Ember.debug = function(message) {
+  setDebugFunction('debug', function(message) {
     logged = true;
-  };
+  });
 
   jQuery('#qunit-fixture').empty();
 

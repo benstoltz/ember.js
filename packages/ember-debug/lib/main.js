@@ -1,18 +1,21 @@
 import Ember from 'ember-metal/core';
-import { registerDebugFunction } from 'ember-metal/assert';
+import {
+  warn,
+  deprecate,
+  debug,
+  setDebugFunction
+} from 'ember-metal/debug';
 import isEnabled, { FEATURES } from 'ember-metal/features';
 import EmberError from 'ember-metal/error';
 import Logger from 'ember-metal/logger';
 import environment from 'ember-metal/environment';
-import deprecate, {
+import _deprecate, {
   registerHandler as registerDeprecationHandler
 } from 'ember-debug/deprecate';
-import warn, {
+import _warn, {
   registerHandler as registerWarnHandler
 } from 'ember-debug/warn';
 import isPlainFunction from 'ember-debug/is-plain-function';
-
-Ember.deprecate = deprecate;
 
 /**
 @module ember
@@ -46,7 +49,7 @@ Ember.deprecate = deprecate;
     its return value will be used as condition.
   @public
 */
-function assert(desc, test) {
+setDebugFunction('assert', function assert(desc, test) {
   var throwAssertion;
 
   if (isPlainFunction(test)) {
@@ -58,7 +61,7 @@ function assert(desc, test) {
   if (throwAssertion) {
     throw new EmberError('Assertion Failed: ' + desc);
   }
-}
+});
 
 /**
   Display a debug notice. Ember build tools will remove any calls to
@@ -72,9 +75,19 @@ function assert(desc, test) {
   @param {String} message A debug message to display.
   @public
 */
-function debug(message) {
+setDebugFunction('debug', function debug(message) {
   Logger.debug('DEBUG: ' + message);
-}
+});
+
+/**
+  Display an info notice.
+
+  @method info
+  @private
+*/
+setDebugFunction('info', function info() {
+  Logger.info.apply(undefined, arguments);
+});
 
 /**
   Alias an old, deprecated method with its new counterpart.
@@ -96,21 +109,21 @@ function debug(message) {
   @return {Function} a new function that wrapped the original function with a deprecation warning
   @private
 */
-function deprecateFunc(...args) {
+setDebugFunction('deprecateFunc', function deprecateFunc(...args) {
   if (args.length === 3) {
     let [message, options, func] = args;
     return function() {
-      Ember.deprecate(message, false, options);
+      deprecate(message, false, options);
       return func.apply(this, arguments);
     };
   } else {
     let [message, func] = args;
     return function() {
-      Ember.deprecate(message);
+      deprecate(message);
       return func.apply(this, arguments);
     };
   }
-}
+});
 
 
 /**
@@ -132,17 +145,12 @@ function deprecateFunc(...args) {
   @since 1.5.0
   @public
 */
-function runInDebug(func) {
+setDebugFunction('runInDebug', function runInDebug(func) {
   func();
-}
+});
 
-registerDebugFunction('assert', assert);
-registerDebugFunction('warn', warn);
-registerDebugFunction('debug', debug);
-registerDebugFunction('deprecate', deprecate);
-registerDebugFunction('deprecateFunc', deprecateFunc);
-registerDebugFunction('runInDebug', runInDebug);
-
+setDebugFunction('deprecate', _deprecate);
+setDebugFunction('warn', _warn);
 /**
   Will call `Ember.warn()` if ENABLE_ALL_FEATURES, ENABLE_OPTIONAL_FEATURES, or
   any specific FEATURES flag is truthy.
@@ -155,12 +163,12 @@ registerDebugFunction('runInDebug', runInDebug);
 */
 export function _warnIfUsingStrippedFeatureFlags(FEATURES, featuresWereStripped) {
   if (featuresWereStripped) {
-    Ember.warn('Ember.ENV.ENABLE_ALL_FEATURES is only available in canary builds.', !Ember.ENV.ENABLE_ALL_FEATURES, { id: 'ember-debug.feature-flag-with-features-stripped' });
-    Ember.warn('Ember.ENV.ENABLE_OPTIONAL_FEATURES is only available in canary builds.', !Ember.ENV.ENABLE_OPTIONAL_FEATURES, { id: 'ember-debug.feature-flag-with-features-stripped' });
+    warn('Ember.ENV.ENABLE_ALL_FEATURES is only available in canary builds.', !Ember.ENV.ENABLE_ALL_FEATURES, { id: 'ember-debug.feature-flag-with-features-stripped' });
+    warn('Ember.ENV.ENABLE_OPTIONAL_FEATURES is only available in canary builds.', !Ember.ENV.ENABLE_OPTIONAL_FEATURES, { id: 'ember-debug.feature-flag-with-features-stripped' });
 
     for (var key in FEATURES) {
       if (FEATURES.hasOwnProperty(key) && key !== 'isEnabled') {
-        Ember.warn('FEATURE["' + key + '"] is set as enabled, but FEATURE flags are only available in canary builds.', !FEATURES[key], { id: 'ember-debug.feature-flag-with-features-stripped' });
+        warn('FEATURE["' + key + '"] is set as enabled, but FEATURE flags are only available in canary builds.', !FEATURES[key], { id: 'ember-debug.feature-flag-with-features-stripped' });
       }
     }
   }
@@ -193,7 +201,7 @@ if (!Ember.testing) {
           downloadURL = 'https://addons.mozilla.org/en-US/firefox/addon/ember-inspector/';
         }
 
-        Ember.debug('For more advanced debugging, install the Ember Inspector from ' + downloadURL);
+        debug('For more advanced debugging, install the Ember Inspector from ' + downloadURL);
       }
     }, false);
   }
@@ -215,5 +223,5 @@ if (isEnabled('ember-debug-handlers')) {
 */
 export var runningNonEmberDebugJS = false;
 if (runningNonEmberDebugJS) {
-  Ember.warn('Please use `ember.debug.js` instead of `ember.js` for development and debugging.');
+  warn('Please use `ember.debug.js` instead of `ember.js` for development and debugging.');
 }
