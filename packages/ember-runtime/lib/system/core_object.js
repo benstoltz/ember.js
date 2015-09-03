@@ -1,7 +1,6 @@
+'no use strict';
 // Remove "use strict"; from transpiled module until
 // https://bugs.webkit.org/show_bug.cgi?id=138038 is fixed
-//
-'REMOVE_USE_STRICT: true';
 
 /**
   @module ember
@@ -111,7 +110,7 @@ function makeCtor() {
           var value = properties[keyName];
 
           if (IS_BINDING.test(keyName)) {
-            m.writeBindings(keyName, value);
+            m.writableBindings()[keyName] = value;
           }
 
           var possibleDesc = this[keyName];
