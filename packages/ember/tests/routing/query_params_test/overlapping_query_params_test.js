@@ -1,22 +1,25 @@
 import Ember from 'ember-metal/core';
+import run from 'ember-metal/run_loop';
 import isEnabled from 'ember-metal/features';
 import { compile } from 'ember-template-compiler';
+import Application from 'ember-application/system/application';
+import NoneLocation from 'ember-routing/location/none_location';
 
 var Router, App, router, registry, container;
 
 function bootApplication() {
   router = container.lookup('router:main');
-  Ember.run(App, 'advanceReadiness');
+  run(App, 'advanceReadiness');
 }
 
 var startingURL = '';
 var expectedReplaceURL, expectedPushURL;
 
 function setAndFlush(obj, prop, value) {
-  Ember.run(obj, 'set', prop, value);
+  run(obj, 'set', prop, value);
 }
 
-var TestLocation = Ember.NoneLocation.extend({
+var TestLocation = NoneLocation.extend({
   initState() {
     this.set('path', startingURL);
   },
@@ -45,8 +48,8 @@ var TestLocation = Ember.NoneLocation.extend({
 });
 
 function sharedSetup() {
-  Ember.run(function() {
-    App = Ember.Application.create({
+  run(function() {
+    App = Application.create({
       name: 'App',
       rootElement: '#qunit-fixture'
     });
@@ -75,7 +78,7 @@ function sharedSetup() {
 }
 
 function sharedTeardown() {
-  Ember.run(function() {
+  run(function() {
     App.destroy();
     App = null;
 
@@ -97,7 +100,7 @@ if (isEnabled('ember-routing-route-configured-query-params')) {
 
       this.boot = function() {
         bootApplication();
-        Ember.run(router, 'transitionTo', 'parent.child');
+        run(router, 'transitionTo', 'parent.child');
       };
     },
 
@@ -142,14 +145,14 @@ if (isEnabled('ember-routing-route-configured-query-params')) {
     setAndFlush(parentChildController, 'page', 1);
     equal(router.get('location.path'), '/parent/child');
 
-    Ember.run(function() {
+    run(function() {
       parentController.set('page', 2);
       parentChildController.set('page', 2);
     });
 
     equal(router.get('location.path'), '/parent/child?childPage=2&parentPage=2');
 
-    Ember.run(function() {
+    run(function() {
       parentController.set('page', 1);
       parentChildController.set('page', 1);
     });
@@ -194,7 +197,7 @@ if (isEnabled('ember-routing-route-configured-query-params')) {
 
       this.boot = function() {
         bootApplication();
-        Ember.run(router, 'transitionTo', 'parent.child');
+        run(router, 'transitionTo', 'parent.child');
       };
     },
 
@@ -231,14 +234,14 @@ if (isEnabled('ember-routing-route-configured-query-params')) {
     setAndFlush(parentChildController, 'page', 1);
     equal(router.get('location.path'), '/parent/child');
 
-    Ember.run(function() {
+    run(function() {
       parentController.set('page', 2);
       parentChildController.set('page', 2);
     });
 
     equal(router.get('location.path'), '/parent/child?childPage=2&parentPage=2');
 
-    Ember.run(function() {
+    run(function() {
       parentController.set('page', 1);
       parentChildController.set('page', 1);
     });

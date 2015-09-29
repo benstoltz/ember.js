@@ -1,22 +1,33 @@
 import Ember from 'ember-metal/core';
+import Logger from 'ember-metal/logger';
+import run from 'ember-metal/run_loop';
+import RSVP from 'ember-runtime/ext/rsvp';
+import EmberObject from 'ember-runtime/system/object';
 import isEnabled from 'ember-metal/features';
 import { get } from 'ember-metal/property_get';
 import { set } from 'ember-metal/property_set';
+import { computed } from 'ember-metal/computed';
+import Component from 'ember-views/components/component';
 import ActionManager from 'ember-views/system/action_manager';
 import EmberView from 'ember-views/views/view';
+import jQuery from 'ember-views/system/jquery';
 import { compile } from 'ember-template-compiler';
+import Application from 'ember-application/system/application';
+import { A as emberA } from 'ember-runtime/system/native_array';
+import NoneLocation from 'ember-routing/location/none_location';
+import HistoryLocation from 'ember-routing/location/history_location';
 
-var trim = Ember.$.trim;
+var trim = jQuery.trim;
 
 var Router, App, router, registry, container, originalLoggerError;
 
 function bootApplication() {
   router = container.lookup('router:main');
-  Ember.run(App, 'advanceReadiness');
+  run(App, 'advanceReadiness');
 }
 
 function handleURL(path) {
-  return Ember.run(function() {
+  return run(function() {
     return router.handleURL(path).then(function(value) {
       ok(true, 'url: `' + path + '` was handled');
       return value;
@@ -28,7 +39,7 @@ function handleURL(path) {
 }
 
 function handleURLAborts(path) {
-  Ember.run(function() {
+  run(function() {
     router.handleURL(path).then(function(value) {
       ok(false, 'url: `' + path + '` was NOT to be handled');
     }, function(reason) {
@@ -38,7 +49,7 @@ function handleURLAborts(path) {
 }
 
 function handleURLRejectsWith(path, expectedReason) {
-  Ember.run(function() {
+  run(function() {
     router.handleURL(path).then(function(value) {
       ok(false, 'expected handleURLing: `' + path + '` to fail');
     }, function(reason) {
@@ -49,8 +60,8 @@ function handleURLRejectsWith(path, expectedReason) {
 
 QUnit.module('Basic Routing', {
   setup() {
-    Ember.run(function() {
-      App = Ember.Application.create({
+    run(function() {
+      App = Application.create({
         name: 'App',
         rootElement: '#qunit-fixture'
       });
@@ -74,17 +85,17 @@ QUnit.module('Basic Routing', {
       Ember.TEMPLATES.homepage = compile('<h3>Megatroll</h3><p>{{model.home}}</p>');
       Ember.TEMPLATES.camelot = compile('<section><h3>Is a silly place</h3></section>');
 
-      originalLoggerError = Ember.Logger.error;
+      originalLoggerError = Logger.error;
     });
   },
 
   teardown() {
-    Ember.run(function() {
+    run(function() {
       App.destroy();
       App = null;
 
       Ember.TEMPLATES = {};
-      Ember.Logger.error = originalLoggerError;
+      Logger.error = originalLoggerError;
     });
   }
 });
@@ -98,7 +109,7 @@ QUnit.test('warn on URLs not included in the route set', function () {
   bootApplication();
 
   expectAssertion(function() {
-    Ember.run(function() {
+    run(function() {
       router.handleURL('/what-is-this-i-dont-even');
     });
   }, 'The URL \'/what-is-this-i-dont-even\' did not match any routes in your application');
@@ -123,7 +134,7 @@ QUnit.test('The Homepage', function() {
   bootApplication();
 
   equal(currentPath, 'home');
-  equal(Ember.$('h3:contains(Hours)', '#qunit-fixture').length, 1, 'The home template was rendered');
+  equal(jQuery('h3:contains(Hours)', '#qunit-fixture').length, 1, 'The home template was rendered');
 });
 
 QUnit.test('The Home page and the Camelot page with multiple Router.map calls', function() {
@@ -160,12 +171,12 @@ QUnit.test('The Home page and the Camelot page with multiple Router.map calls', 
   handleURL('/camelot');
 
   equal(currentPath, 'camelot');
-  equal(Ember.$('h3:contains(silly)', '#qunit-fixture').length, 1, 'The camelot template was rendered');
+  equal(jQuery('h3:contains(silly)', '#qunit-fixture').length, 1, 'The camelot template was rendered');
 
   handleURL('/');
 
   equal(currentPath, 'home');
-  equal(Ember.$('h3:contains(Hours)', '#qunit-fixture').length, 1, 'The home template was rendered');
+  equal(jQuery('h3:contains(Hours)', '#qunit-fixture').length, 1, 'The home template was rendered');
 });
 
 QUnit.test('The Homepage with explicit template name in renderTemplate', function() {
@@ -181,7 +192,7 @@ QUnit.test('The Homepage with explicit template name in renderTemplate', functio
 
   bootApplication();
 
-  equal(Ember.$('h3:contains(Megatroll)', '#qunit-fixture').length, 1, 'The homepage template was rendered');
+  equal(jQuery('h3:contains(Megatroll)', '#qunit-fixture').length, 1, 'The homepage template was rendered');
 });
 
 QUnit.test('An alternate template will pull in an alternate controller', function() {
@@ -203,7 +214,7 @@ QUnit.test('An alternate template will pull in an alternate controller', functio
 
   bootApplication();
 
-  equal(Ember.$('h3:contains(Megatroll) + p:contains(Comes from homepage)', '#qunit-fixture').length, 1, 'The homepage template was rendered');
+  equal(jQuery('h3:contains(Megatroll) + p:contains(Comes from homepage)', '#qunit-fixture').length, 1, 'The homepage template was rendered');
 });
 
 QUnit.test('An alternate template will pull in an alternate controller instead of controllerName', function() {
@@ -232,7 +243,7 @@ QUnit.test('An alternate template will pull in an alternate controller instead o
 
   bootApplication();
 
-  equal(Ember.$('h3:contains(Megatroll) + p:contains(Comes from homepage)', '#qunit-fixture').length, 1, 'The homepage template was rendered');
+  equal(jQuery('h3:contains(Megatroll) + p:contains(Comes from homepage)', '#qunit-fixture').length, 1, 'The homepage template was rendered');
 });
 
 QUnit.test('The template will pull in an alternate controller via key/value', function() {
@@ -254,7 +265,7 @@ QUnit.test('The template will pull in an alternate controller via key/value', fu
 
   bootApplication();
 
-  equal(Ember.$('h3:contains(Megatroll) + p:contains(Comes from home.)', '#qunit-fixture').length, 1, 'The homepage template was rendered from data from the HomeController');
+  equal(jQuery('h3:contains(Megatroll) + p:contains(Comes from home.)', '#qunit-fixture').length, 1, 'The homepage template was rendered from data from the HomeController');
 });
 
 QUnit.test('The Homepage with explicit template name in renderTemplate and controller', function() {
@@ -276,7 +287,7 @@ QUnit.test('The Homepage with explicit template name in renderTemplate and contr
 
   bootApplication();
 
-  equal(Ember.$('h3:contains(Megatroll) + p:contains(YES I AM HOME)', '#qunit-fixture').length, 1, 'The homepage template was rendered');
+  equal(jQuery('h3:contains(Megatroll) + p:contains(YES I AM HOME)', '#qunit-fixture').length, 1, 'The homepage template was rendered');
 });
 
 QUnit.test('Model passed via renderTemplate model is set as controller\'s model', function() {
@@ -298,7 +309,7 @@ QUnit.test('Model passed via renderTemplate model is set as controller\'s model'
 
   bootApplication();
 
-  equal(Ember.$('p:contains(emberjs)', '#qunit-fixture').length, 1, 'Passed model was set as controllers model');
+  equal(jQuery('p:contains(emberjs)', '#qunit-fixture').length, 1, 'Passed model was set as controllers model');
 });
 
 if (isEnabled('ember-routing-routable-components')) {
@@ -312,14 +323,14 @@ if (isEnabled('ember-routing-routable-components')) {
 
     App.HomeRoute = Ember.Route.extend();
 
-    App.HomeComponent = Ember.Component.extend({
+    App.HomeComponent = Component.extend({
       isGlimmerComponent: true,
       name: 'Home'
     });
 
     bootApplication();
 
-    equal(Ember.$('p:contains(Home)', '#qunit-fixture').length, 1, 'The home component was rendered');
+    equal(jQuery('p:contains(Home)', '#qunit-fixture').length, 1, 'The home component was rendered');
   });
 
   QUnit.test('Must be a GlimmerComponent to prevent component naming collisions', function() {
@@ -333,13 +344,13 @@ if (isEnabled('ember-routing-routable-components')) {
     App.HomeRoute = Ember.Route.extend();
 
     // Not a GlimmerComponent, shouldn't be rendered
-    App.HomeComponent = Ember.Component.extend({
+    App.HomeComponent = Component.extend({
       name: 'Home'
     });
 
     bootApplication();
 
-    equal(Ember.$('p:contains(Home)', '#qunit-fixture').length, 0, 'The home component was not rendered');
+    equal(jQuery('p:contains(Home)', '#qunit-fixture').length, 0, 'The home component was not rendered');
   });
 
   QUnit.test('Favors existing templates/views over the component for the route', function() {
@@ -352,13 +363,13 @@ if (isEnabled('ember-routing-routable-components')) {
 
     App.HomeRoute = Ember.Route.extend();
 
-    App.HomeComponent = Ember.Component.extend({
+    App.HomeComponent = Component.extend({
       isGlimmerComponent: true
     });
 
     bootApplication();
 
-    equal(Ember.$('#qunit-fixture').text(), 'PASS', 'The home view was rendered instead of the component');
+    equal(jQuery('#qunit-fixture').text(), 'PASS', 'The home view was rendered instead of the component');
   });
 
   QUnit.test('Renders the component given in the component option', function() {
@@ -375,14 +386,14 @@ if (isEnabled('ember-routing-routable-components')) {
       }
     });
 
-    App.HomeComponent = Ember.Component.extend({
+    App.HomeComponent = Component.extend({
       isGlimmerComponent: true,
       name: 'Home'
     });
 
     bootApplication();
 
-    equal(Ember.$('p:contains(Home)', '#qunit-fixture').length, 1, 'The home component was rendered');
+    equal(jQuery('p:contains(Home)', '#qunit-fixture').length, 1, 'The home component was rendered');
   });
 
   QUnit.test('Routable components get passed model in their attrs', function() {
@@ -401,13 +412,13 @@ if (isEnabled('ember-routing-routable-components')) {
       }
     });
 
-    App.HomeComponent = Ember.Component.extend({
+    App.HomeComponent = Component.extend({
       isGlimmerComponent: true
     });
 
     bootApplication();
 
-    equal(Ember.$('p:contains(Home)', '#qunit-fixture').length, 1, 'The model was present');
+    equal(jQuery('p:contains(Home)', '#qunit-fixture').length, 1, 'The model was present');
   });
 }
 
@@ -430,7 +441,7 @@ QUnit.test('Renders correct view with slash notation', function() {
 
   bootApplication();
 
-  equal(Ember.$('p:contains(Home/Page)', '#qunit-fixture').length, 1, 'The homepage template was rendered');
+  equal(jQuery('p:contains(Home/Page)', '#qunit-fixture').length, 1, 'The homepage template was rendered');
 });
 
 QUnit.test('Renders the view given in the view option', function() {
@@ -452,7 +463,7 @@ QUnit.test('Renders the view given in the view option', function() {
 
   bootApplication();
 
-  equal(Ember.$('p:contains(Home/Page)', '#qunit-fixture').length, 1, 'The homepage view was rendered');
+  equal(jQuery('p:contains(Home/Page)', '#qunit-fixture').length, 1, 'The homepage view was rendered');
 });
 
 QUnit.test('render does not replace templateName if user provided', function() {
@@ -472,7 +483,7 @@ QUnit.test('render does not replace templateName if user provided', function() {
 
   bootApplication();
 
-  equal(Ember.$('p', '#qunit-fixture').text(), 'THIS IS THE REAL HOME', 'The homepage template was rendered');
+  equal(jQuery('p', '#qunit-fixture').text(), 'THIS IS THE REAL HOME', 'The homepage template was rendered');
 });
 
 QUnit.test('render does not replace template if user provided', function () {
@@ -488,11 +499,11 @@ QUnit.test('render does not replace template if user provided', function () {
 
   bootApplication();
 
-  Ember.run(function () {
+  run(function () {
     router.handleURL('/');
   });
 
-  equal(Ember.$('p', '#qunit-fixture').text(), 'THIS IS THE REAL HOME', 'The homepage template was rendered');
+  equal(jQuery('p', '#qunit-fixture').text(), 'THIS IS THE REAL HOME', 'The homepage template was rendered');
 });
 
 QUnit.test('render uses templateName from route', function() {
@@ -511,7 +522,7 @@ QUnit.test('render uses templateName from route', function() {
 
   bootApplication();
 
-  equal(Ember.$('p', '#qunit-fixture').text(), 'THIS IS THE REAL HOME', 'The homepage template was rendered');
+  equal(jQuery('p', '#qunit-fixture').text(), 'THIS IS THE REAL HOME', 'The homepage template was rendered');
 });
 
 QUnit.test('defining templateName allows other templates to be rendered', function() {
@@ -541,13 +552,13 @@ QUnit.test('defining templateName allows other templates to be rendered', functi
 
   bootApplication();
 
-  equal(Ember.$('p', '#qunit-fixture').text(), 'THIS IS THE REAL HOME', 'The homepage template was rendered');
+  equal(jQuery('p', '#qunit-fixture').text(), 'THIS IS THE REAL HOME', 'The homepage template was rendered');
 
-  Ember.run(function() {
+  run(function() {
     router.send('showAlert');
   });
 
-  equal(Ember.$('.alert-box', '#qunit-fixture').text(), 'Invader!', 'Template for alert was render into outlet');
+  equal(jQuery('.alert-box', '#qunit-fixture').text(), 'Invader!', 'Template for alert was render into outlet');
 });
 
 QUnit.test('Specifying a name to render should have precedence over everything else', function() {
@@ -584,9 +595,9 @@ QUnit.test('Specifying a name to render should have precedence over everything e
 
   bootApplication();
 
-  equal(Ember.$('h3', '#qunit-fixture').text(), 'Megatroll', 'The homepage template was rendered');
-  equal(Ember.$('p', '#qunit-fixture').text(), 'Tinytroll', 'The homepage controller was used');
-  equal(Ember.$('span', '#qunit-fixture').text(), 'Outertroll', 'The homepage view was used');
+  equal(jQuery('h3', '#qunit-fixture').text(), 'Megatroll', 'The homepage template was rendered');
+  equal(jQuery('p', '#qunit-fixture').text(), 'Tinytroll', 'The homepage controller was used');
+  equal(jQuery('span', '#qunit-fixture').text(), 'Outertroll', 'The homepage view was used');
 });
 
 QUnit.test('The Homepage with a `setupController` hook', function() {
@@ -596,7 +607,7 @@ QUnit.test('The Homepage with a `setupController` hook', function() {
 
   App.HomeRoute = Ember.Route.extend({
     setupController(controller) {
-      set(controller, 'hours', Ember.A([
+      set(controller, 'hours', emberA([
         'Monday through Friday: 9am to 5pm',
         'Saturday: Noon to Midnight',
         'Sunday: Noon to 6pm'
@@ -610,7 +621,7 @@ QUnit.test('The Homepage with a `setupController` hook', function() {
 
   bootApplication();
 
-  equal(Ember.$('ul li', '#qunit-fixture').eq(2).text(), 'Sunday: Noon to 6pm', 'The template was rendered with the hours context');
+  equal(jQuery('ul li', '#qunit-fixture').eq(2).text(), 'Sunday: Noon to 6pm', 'The template was rendered with the hours context');
 });
 
 QUnit.test('The route controller is still set when overriding the setupController hook', function() {
@@ -652,7 +663,7 @@ QUnit.test('The route controller can be specified via controllerName', function(
   bootApplication();
 
   deepEqual(container.lookup('route:home').controller, container.lookup('controller:myController'), 'route controller is set by controllerName');
-  equal(Ember.$('p', '#qunit-fixture').text(), 'foo', 'The homepage template was rendered with data from the custom controller');
+  equal(jQuery('p', '#qunit-fixture').text(), 'foo', 'The homepage template was rendered with data from the custom controller');
 });
 
 QUnit.test('The route controller specified via controllerName is used in render', function() {
@@ -678,7 +689,7 @@ QUnit.test('The route controller specified via controllerName is used in render'
   bootApplication();
 
   deepEqual(container.lookup('route:home').controller, container.lookup('controller:myController'), 'route controller is set by controllerName');
-  equal(Ember.$('p', '#qunit-fixture').text(), 'alternative home: foo', 'The homepage template was rendered with data from the custom controller');
+  equal(jQuery('p', '#qunit-fixture').text(), 'alternative home: foo', 'The homepage template was rendered with data from the custom controller');
 });
 
 QUnit.test('The route controller specified via controllerName is used in render even when a controller with the routeName is available', function() {
@@ -705,7 +716,7 @@ QUnit.test('The route controller specified via controllerName is used in render 
   bootApplication();
 
   deepEqual(container.lookup('route:home').controller, container.lookup('controller:myController'), 'route controller is set by controllerName');
-  equal(Ember.$('p', '#qunit-fixture').text(), 'home: myController', 'The homepage template was rendered with data from the custom controller');
+  equal(jQuery('p', '#qunit-fixture').text(), 'home: myController', 'The homepage template was rendered with data from the custom controller');
 });
 
 QUnit.test('The Homepage with a `setupController` hook modifying other controllers', function() {
@@ -715,7 +726,7 @@ QUnit.test('The Homepage with a `setupController` hook modifying other controlle
 
   App.HomeRoute = Ember.Route.extend({
     setupController(controller) {
-      set(this.controllerFor('home'), 'hours', Ember.A([
+      set(this.controllerFor('home'), 'hours', emberA([
         'Monday through Friday: 9am to 5pm',
         'Saturday: Noon to Midnight',
         'Sunday: Noon to 6pm'
@@ -729,7 +740,7 @@ QUnit.test('The Homepage with a `setupController` hook modifying other controlle
 
   bootApplication();
 
-  equal(Ember.$('ul li', '#qunit-fixture').eq(2).text(), 'Sunday: Noon to 6pm', 'The template was rendered with the hours context');
+  equal(jQuery('ul li', '#qunit-fixture').eq(2).text(), 'Sunday: Noon to 6pm', 'The template was rendered with the hours context');
 });
 
 QUnit.test('The Homepage with a computed context that does not get overridden', function() {
@@ -738,8 +749,8 @@ QUnit.test('The Homepage with a computed context that does not get overridden', 
   });
 
   App.HomeController = Ember.Controller.extend({
-    model: Ember.computed(function() {
-      return Ember.A([
+    model: computed(function() {
+      return emberA([
         'Monday through Friday: 9am to 5pm',
         'Saturday: Noon to Midnight',
         'Sunday: Noon to 6pm'
@@ -753,7 +764,7 @@ QUnit.test('The Homepage with a computed context that does not get overridden', 
 
   bootApplication();
 
-  equal(Ember.$('ul li', '#qunit-fixture').eq(2).text(), 'Sunday: Noon to 6pm', 'The template was rendered with the context intact');
+  equal(jQuery('ul li', '#qunit-fixture').eq(2).text(), 'Sunday: Noon to 6pm', 'The template was rendered with the context intact');
 });
 
 QUnit.test('The Homepage getting its controller context via model', function() {
@@ -763,7 +774,7 @@ QUnit.test('The Homepage getting its controller context via model', function() {
 
   App.HomeRoute = Ember.Route.extend({
     model() {
-      return Ember.A([
+      return emberA([
         'Monday through Friday: 9am to 5pm',
         'Saturday: Noon to Midnight',
         'Sunday: Noon to 6pm'
@@ -783,7 +794,7 @@ QUnit.test('The Homepage getting its controller context via model', function() {
 
   bootApplication();
 
-  equal(Ember.$('ul li', '#qunit-fixture').eq(2).text(), 'Sunday: Noon to 6pm', 'The template was rendered with the hours context');
+  equal(jQuery('ul li', '#qunit-fixture').eq(2).text(), 'Sunday: Noon to 6pm', 'The template was rendered with the hours context');
 });
 
 QUnit.test('The Specials Page getting its controller context by deserializing the params hash', function() {
@@ -794,7 +805,7 @@ QUnit.test('The Specials Page getting its controller context by deserializing th
 
   App.SpecialRoute = Ember.Route.extend({
     model(params) {
-      return Ember.Object.create({
+      return EmberObject.create({
         menuItemId: params.menu_item_id
       });
     },
@@ -814,7 +825,7 @@ QUnit.test('The Specials Page getting its controller context by deserializing th
 
   handleURL('/specials/1');
 
-  equal(Ember.$('p', '#qunit-fixture').text(), '1', 'The model was used to render the template');
+  equal(jQuery('p', '#qunit-fixture').text(), '1', 'The model was used to render the template');
 });
 
 QUnit.test('The Specials Page defaults to looking models up via `find`', function() {
@@ -823,7 +834,7 @@ QUnit.test('The Specials Page defaults to looking models up via `find`', functio
     this.route('special', { path: '/specials/:menu_item_id' });
   });
 
-  App.MenuItem = Ember.Object.extend();
+  App.MenuItem = EmberObject.extend();
   App.MenuItem.reopenClass({
     find(id) {
       return App.MenuItem.create({
@@ -848,7 +859,7 @@ QUnit.test('The Specials Page defaults to looking models up via `find`', functio
 
   handleURL('/specials/1');
 
-  equal(Ember.$('p', '#qunit-fixture').text(), '1', 'The model was used to render the template');
+  equal(jQuery('p', '#qunit-fixture').text(), '1', 'The model was used to render the template');
 });
 
 QUnit.test('The Special Page returning a promise puts the app into a loading state until the promise is resolved', function() {
@@ -859,12 +870,12 @@ QUnit.test('The Special Page returning a promise puts the app into a loading sta
 
   var menuItem, resolve;
 
-  App.MenuItem = Ember.Object.extend();
+  App.MenuItem = EmberObject.extend();
   App.MenuItem.reopenClass({
     find(id) {
       menuItem = App.MenuItem.create({ id: id });
 
-      return new Ember.RSVP.Promise(function(res) {
+      return new RSVP.Promise(function(res) {
         resolve = res;
       });
     }
@@ -894,13 +905,13 @@ QUnit.test('The Special Page returning a promise puts the app into a loading sta
 
   handleURL('/specials/1');
 
-  equal(Ember.$('p', '#qunit-fixture').text(), 'LOADING!', 'The app is in the loading state');
+  equal(jQuery('p', '#qunit-fixture').text(), 'LOADING!', 'The app is in the loading state');
 
-  Ember.run(function() {
+  run(function() {
     resolve(menuItem);
   });
 
-  equal(Ember.$('p', '#qunit-fixture').text(), '1', 'The app is now in the specials state');
+  equal(jQuery('p', '#qunit-fixture').text(), '1', 'The app is now in the specials state');
 });
 
 QUnit.test('The loading state doesn\'t get entered for promises that resolve on the same run loop', function() {
@@ -909,7 +920,7 @@ QUnit.test('The loading state doesn\'t get entered for promises that resolve on 
     this.route('special', { path: '/specials/:menu_item_id' });
   });
 
-  App.MenuItem = Ember.Object.extend();
+  App.MenuItem = EmberObject.extend();
   App.MenuItem.reopenClass({
     find(id) {
       return { id: id };
@@ -942,7 +953,7 @@ QUnit.test('The loading state doesn\'t get entered for promises that resolve on 
 
   handleURL('/specials/1');
 
-  equal(Ember.$('p', '#qunit-fixture').text(), '1', 'The app is now in the specials state');
+  equal(jQuery('p', '#qunit-fixture').text(), '1', 'The app is now in the specials state');
 });
 
 /*
@@ -958,7 +969,7 @@ asyncTest("The Special page returning an error fires the error hook on SpecialRo
   App.MenuItem.reopenClass({
     find: function(id) {
       menuItem = App.MenuItem.create({ id: id });
-      Ember.run.later(function() { menuItem.resolve(menuItem); }, 1);
+      run.later(function() { menuItem.resolve(menuItem); }, 1);
       return menuItem;
     }
   });
@@ -989,11 +1000,11 @@ QUnit.test('The Special page returning an error invokes SpecialRoute\'s error ha
 
   var menuItem, promise, resolve;
 
-  App.MenuItem = Ember.Object.extend();
+  App.MenuItem = EmberObject.extend();
   App.MenuItem.reopenClass({
     find(id) {
       menuItem = App.MenuItem.create({ id: id });
-      promise = new Ember.RSVP.Promise(function(res) {
+      promise = new RSVP.Promise(function(res) {
         resolve = res;
       });
 
@@ -1016,7 +1027,7 @@ QUnit.test('The Special page returning an error invokes SpecialRoute\'s error ha
 
   handleURLRejectsWith('/specials/1', 'Setup error');
 
-  Ember.run(function() {
+  run(function() {
     resolve(menuItem);
   });
 });
@@ -1031,11 +1042,11 @@ function testOverridableErrorHandler(handlersName) {
 
   var menuItem, resolve;
 
-  App.MenuItem = Ember.Object.extend();
+  App.MenuItem = EmberObject.extend();
   App.MenuItem.reopenClass({
     find(id) {
       menuItem = App.MenuItem.create({ id: id });
-      return new Ember.RSVP.Promise(function(res) {
+      return new RSVP.Promise(function(res) {
         resolve = res;
       });
     }
@@ -1060,7 +1071,7 @@ function testOverridableErrorHandler(handlersName) {
 
   handleURLRejectsWith('/specials/1', 'Setup error');
 
-  Ember.run(function() {
+  run(function() {
     resolve(menuItem);
   });
 }
@@ -1077,7 +1088,7 @@ asyncTest('Moving from one page to another triggers the correct callbacks', func
     this.route('special', { path: '/specials/:menu_item_id' });
   });
 
-  App.MenuItem = Ember.Object.extend();
+  App.MenuItem = EmberObject.extend();
 
   App.SpecialRoute = Ember.Route.extend({
     setupController(controller, model) {
@@ -1099,13 +1110,13 @@ asyncTest('Moving from one page to another triggers the correct callbacks', func
 
   var transition = handleURL('/');
 
-  Ember.run(function() {
+  run(function() {
     transition.then(function() {
-      equal(Ember.$('h3', '#qunit-fixture').text(), 'Home', 'The app is now in the initial state');
+      equal(jQuery('h3', '#qunit-fixture').text(), 'Home', 'The app is now in the initial state');
 
       var promiseContext = App.MenuItem.create({ id: 1 });
-      Ember.run.later(function() {
-        Ember.RSVP.resolve(promiseContext);
+      run.later(function() {
+        RSVP.resolve(promiseContext);
       }, 1);
 
       return router.transitionTo('special', promiseContext);
@@ -1133,7 +1144,7 @@ asyncTest('Nested callbacks are not exited when moving to siblings', function() 
 
   var menuItem;
 
-  App.MenuItem = Ember.Object.extend();
+  App.MenuItem = EmberObject.extend();
   App.MenuItem.reopenClass({
     find(id) {
       menuItem = App.MenuItem.create({ id: id });
@@ -1196,7 +1207,7 @@ asyncTest('Nested callbacks are not exited when moving to siblings', function() 
 
   registry.register('controller:special', Ember.Controller.extend());
 
-  equal(Ember.$('h3', '#qunit-fixture').text(), 'Home', 'The app is now in the initial state');
+  equal(jQuery('h3', '#qunit-fixture').text(), 'Home', 'The app is now in the initial state');
   equal(rootSetup, 1, 'The root setup was triggered');
   equal(rootRender, 1, 'The root render was triggered');
   equal(rootSerialize, 0, 'The root serialize was not called');
@@ -1204,10 +1215,10 @@ asyncTest('Nested callbacks are not exited when moving to siblings', function() 
 
   router = container.lookup('router:main');
 
-  Ember.run(function() {
+  run(function() {
     var menuItem = App.MenuItem.create({ id: 1 });
-    Ember.run.later(function() {
-      Ember.RSVP.resolve(menuItem);
+    run.later(function() {
+      RSVP.resolve(menuItem);
     }, 1);
 
     router.transitionTo('special', menuItem).then(function(result) {
@@ -1264,9 +1275,9 @@ QUnit.asyncTest('Events are triggered on the controller if a matching action nam
 
   bootApplication();
 
-  var actionId = Ember.$('#qunit-fixture a').data('ember-action');
+  var actionId = jQuery('#qunit-fixture a').data('ember-action');
   var [ action ] = ActionManager.registeredActions[actionId];
-  var event = new Ember.$.Event('click');
+  var event = new jQuery.Event('click');
   action.handler(event);
 });
 
@@ -1298,9 +1309,9 @@ QUnit.asyncTest('Events are triggered on the current state when defined in `acti
 
   bootApplication();
 
-  var actionId = Ember.$('#qunit-fixture a').data('ember-action');
+  var actionId = jQuery('#qunit-fixture a').data('ember-action');
   var [ action ] = ActionManager.registeredActions[actionId];
-  var event = new Ember.$.Event('click');
+  var event = new jQuery.Event('click');
   action.handler(event);
 });
 
@@ -1336,9 +1347,9 @@ QUnit.asyncTest('Events defined in `actions` object are triggered on the current
 
   bootApplication();
 
-  var actionId = Ember.$('#qunit-fixture a').data('ember-action');
+  var actionId = jQuery('#qunit-fixture a').data('ember-action');
   var [ action ] = ActionManager.registeredActions[actionId];
-  var event = new Ember.$.Event('click');
+  var event = new jQuery.Event('click');
   action.handler(event);
 });
 
@@ -1417,9 +1428,9 @@ QUnit.asyncTest('Actions are not triggered on the controller if a matching actio
 
   bootApplication();
 
-  var actionId = Ember.$('#qunit-fixture a').data('ember-action');
+  var actionId = jQuery('#qunit-fixture a').data('ember-action');
   var [ action ] = ActionManager.registeredActions[actionId];
-  var event = new Ember.$.Event('click');
+  var event = new jQuery.Event('click');
   action.handler(event);
 });
 
@@ -1456,9 +1467,9 @@ QUnit.asyncTest('actions can be triggered with multiple arguments', function() {
 
   bootApplication();
 
-  var actionId = Ember.$('#qunit-fixture a').data('ember-action');
+  var actionId = jQuery('#qunit-fixture a').data('ember-action');
   var [ action ] = ActionManager.registeredActions[actionId];
-  var event = new Ember.$.Event('click');
+  var event = new jQuery.Event('click');
   action.handler(event);
 });
 
@@ -1480,7 +1491,7 @@ QUnit.test('transitioning multiple times in a single run loop only sets the URL 
 
   equal(urlSetCount, 0);
 
-  Ember.run(function() {
+  run(function() {
     router.transitionTo('foo');
     router.transitionTo('bar');
   });
@@ -1500,14 +1511,14 @@ QUnit.test('navigating away triggers a url property change', function() {
 
   bootApplication();
 
-  Ember.run(function() {
+  run(function() {
     Ember.addObserver(router, 'url', function() {
       ok(true, 'url change event was fired');
     });
   });
 
   ['foo', 'bar', '/foo'].forEach(function(destination) {
-    Ember.run(router, 'transitionTo', destination);
+    run(router, 'transitionTo', destination);
   });
 });
 
@@ -1516,7 +1527,7 @@ QUnit.test('using replaceWith calls location.replaceURL if available', function(
   var replaceCount = 0;
 
   Router.reopen({
-    location: Ember.NoneLocation.create({
+    location: NoneLocation.create({
       setURL(path) {
         setCount++;
         set(this, 'path', path);
@@ -1539,7 +1550,7 @@ QUnit.test('using replaceWith calls location.replaceURL if available', function(
   equal(setCount, 0);
   equal(replaceCount, 0);
 
-  Ember.run(function() {
+  run(function() {
     router.replaceWith('foo');
   });
 
@@ -1552,7 +1563,7 @@ QUnit.test('using replaceWith calls setURL if location.replaceURL is not defined
   var setCount = 0;
 
   Router.reopen({
-    location: Ember.NoneLocation.create({
+    location: NoneLocation.create({
       setURL(path) {
         setCount++;
         set(this, 'path', path);
@@ -1569,7 +1580,7 @@ QUnit.test('using replaceWith calls setURL if location.replaceURL is not defined
 
   equal(setCount, 0);
 
-  Ember.run(function() {
+  run(function() {
     router.replaceWith('foo');
   });
 
@@ -1771,7 +1782,7 @@ QUnit.test('A redirection hook is provided', function() {
   bootApplication();
 
   equal(chooseFollowed, 0, 'The choose route wasn\'t entered since a transition occurred');
-  equal(Ember.$('h3:contains(Hours)', '#qunit-fixture').length, 1, 'The home template was rendered');
+  equal(jQuery('h3:contains(Hours)', '#qunit-fixture').length, 1, 'The home template was rendered');
   equal(router.container.lookup('controller:application').get('currentPath'), 'home');
 });
 
@@ -1919,7 +1930,7 @@ QUnit.test('Transitioning from a parent event does not prevent currentPath from 
 
   equal(applicationController.get('currentPath'), 'foo.bar.baz');
 
-  Ember.run(function() {
+  run(function() {
     router.send('goToQux');
   });
 
@@ -1970,7 +1981,7 @@ QUnit.test('Generated names can be customized when providing routes with dot not
 
   handleURL('/top/middle/bottom');
 
-  equal(Ember.$('.main .middle .bottom p', '#qunit-fixture').text(), 'BarBazBottom!', 'The templates were rendered into their appropriate parents');
+  equal(jQuery('.main .middle .bottom p', '#qunit-fixture').text(), 'BarBazBottom!', 'The templates were rendered into their appropriate parents');
 });
 
 QUnit.test('Child routes render into their parent route\'s template by default', function() {
@@ -1992,7 +2003,7 @@ QUnit.test('Child routes render into their parent route\'s template by default',
 
   handleURL('/top/middle/bottom');
 
-  equal(Ember.$('.main .middle .bottom p', '#qunit-fixture').text(), 'Bottom!', 'The templates were rendered into their appropriate parents');
+  equal(jQuery('.main .middle .bottom p', '#qunit-fixture').text(), 'Bottom!', 'The templates were rendered into their appropriate parents');
 });
 
 QUnit.test('Child routes render into specified template', function() {
@@ -2020,8 +2031,8 @@ QUnit.test('Child routes render into specified template', function() {
 
   handleURL('/top/middle/bottom');
 
-  equal(Ember.$('.main .middle .bottom p', '#qunit-fixture').length, 0, 'should not render into the middle template');
-  equal(Ember.$('.main .middle > p', '#qunit-fixture').text(), 'Bottom!', 'The template was rendered into the top template');
+  equal(jQuery('.main .middle .bottom p', '#qunit-fixture').length, 0, 'should not render into the middle template');
+  equal(jQuery('.main .middle > p', '#qunit-fixture').text(), 'Bottom!', 'The template was rendered into the top template');
 });
 
 QUnit.test('Rendering into specified template with slash notation', function() {
@@ -2041,12 +2052,12 @@ QUnit.test('Rendering into specified template with slash notation', function() {
 
   bootApplication();
 
-  equal(Ember.$('#qunit-fixture:contains(profile details!)').length, 1, 'The templates were rendered');
+  equal(jQuery('#qunit-fixture:contains(profile details!)').length, 1, 'The templates were rendered');
 });
 
 QUnit.test('Parent route context change', function() {
   var editCount = 0;
-  var editedPostIds = Ember.A();
+  var editedPostIds = emberA();
 
   Ember.TEMPLATES.application = compile('{{outlet}}');
   Ember.TEMPLATES.posts = compile('{{outlet}}');
@@ -2098,15 +2109,15 @@ QUnit.test('Parent route context change', function() {
 
   handleURL('/posts/1');
 
-  Ember.run(function() {
+  run(function() {
     router.send('editPost');
   });
 
-  Ember.run(function() {
+  run(function() {
     router.send('showPost', { id: '2' });
   });
 
-  Ember.run(function() {
+  run(function() {
     router.send('editPost');
   });
 
@@ -2125,7 +2136,7 @@ QUnit.test('Router accounts for rootURL on page load when using history location
 
   // Create new implementation that extends HistoryLocation
   // and set current location to rootURL + '/posts'
-  HistoryTestLocation = Ember.HistoryLocation.extend({
+  HistoryTestLocation = HistoryLocation.extend({
     initState() {
       var path = rootURL + '/posts';
 
@@ -2174,7 +2185,7 @@ QUnit.test('The rootURL is passed properly to the location implementation', func
   var rootURL = '/blahzorz';
   var HistoryTestLocation;
 
-  HistoryTestLocation = Ember.HistoryLocation.extend({
+  HistoryTestLocation = HistoryLocation.extend({
     rootURL: 'this is not the URL you are looking for',
     initState() {
       equal(this.get('rootURL'), rootURL);
@@ -2230,8 +2241,8 @@ QUnit.test('Only use route rendered into main outlet for default into property o
 
   handleURL('/posts');
 
-  equal(Ember.$('div.posts-menu:contains(postsMenu)', '#qunit-fixture').length, 1, 'The posts/menu template was rendered');
-  equal(Ember.$('p.posts-index:contains(postsIndex)', '#qunit-fixture').length, 1, 'The posts/index template was rendered');
+  equal(jQuery('div.posts-menu:contains(postsMenu)', '#qunit-fixture').length, 1, 'The posts/menu template was rendered');
+  equal(jQuery('p.posts-index:contains(postsIndex)', '#qunit-fixture').length, 1, 'The posts/index template was rendered');
 });
 
 QUnit.test('Generating a URL should not affect currentModel', function() {
@@ -2297,7 +2308,7 @@ QUnit.test('Nested index route is not overriden by parent\'s implicit index rout
 
   bootApplication();
 
-  Ember.run(function() {
+  run(function() {
     router.transitionTo('posts', { category: 'emberjs' });
   });
 
@@ -2313,7 +2324,7 @@ QUnit.test('Application template does not duplicate when re-rendered', function(
 
   App.ApplicationRoute = Ember.Route.extend({
     model() {
-      return Ember.A();
+      return emberA();
     }
   });
 
@@ -2322,7 +2333,7 @@ QUnit.test('Application template does not duplicate when re-rendered', function(
   // should cause application template to re-render
   handleURL('/posts');
 
-  equal(Ember.$('h3:contains(I Render Once)').size(), 1);
+  equal(jQuery('h3:contains(I Render Once)').size(), 1);
 });
 
 QUnit.test('Child routes should render inside the application template if the application template causes a redirect', function() {
@@ -2342,7 +2353,7 @@ QUnit.test('Child routes should render inside the application template if the ap
 
   bootApplication();
 
-  equal(Ember.$('#qunit-fixture > div').text(), 'App posts');
+  equal(jQuery('#qunit-fixture > div').text(), 'App posts');
 });
 
 QUnit.test('The template is not re-rendered when the route\'s context changes', function() {
@@ -2352,7 +2363,7 @@ QUnit.test('The template is not re-rendered when the route\'s context changes', 
 
   App.PageRoute = Ember.Route.extend({
     model(params) {
-      return Ember.Object.create({ name: params.name });
+      return EmberObject.create({ name: params.name });
     }
   });
 
@@ -2371,19 +2382,19 @@ QUnit.test('The template is not re-rendered when the route\'s context changes', 
 
   handleURL('/page/first');
 
-  equal(Ember.$('p', '#qunit-fixture').text(), 'first');
+  equal(jQuery('p', '#qunit-fixture').text(), 'first');
   equal(insertionCount, 1);
 
   handleURL('/page/second');
 
-  equal(Ember.$('p', '#qunit-fixture').text(), 'second');
+  equal(jQuery('p', '#qunit-fixture').text(), 'second');
   equal(insertionCount, 1, 'view should have inserted only once');
 
-  Ember.run(function() {
-    router.transitionTo('page', Ember.Object.create({ name: 'third' }));
+  run(function() {
+    router.transitionTo('page', EmberObject.create({ name: 'third' }));
   });
 
-  equal(Ember.$('p', '#qunit-fixture').text(), 'third');
+  equal(jQuery('p', '#qunit-fixture').text(), 'third');
   equal(insertionCount, 1, 'view should still have inserted only once');
 });
 
@@ -2435,17 +2446,17 @@ QUnit.test('The template is not re-rendered when two routes present the exact sa
 
   handleURL('/first');
 
-  equal(Ember.$('p', '#qunit-fixture').text(), 'This is the first message');
+  equal(jQuery('p', '#qunit-fixture').text(), 'This is the first message');
   equal(insertionCount, 1, 'expected one assertion');
 
   // Transition by URL
   handleURL('/second');
 
-  equal(Ember.$('p', '#qunit-fixture').text(), 'This is the second message');
+  equal(jQuery('p', '#qunit-fixture').text(), 'This is the second message');
   equal(insertionCount, 1, 'view should have inserted only once');
 
   // Then transition directly by route name
-  Ember.run(function() {
+  run(function() {
     router.transitionTo('third').then(function(value) {
       ok(true, 'expected transition');
     }, function(reason) {
@@ -2453,13 +2464,13 @@ QUnit.test('The template is not re-rendered when two routes present the exact sa
     });
   });
 
-  equal(Ember.$('p', '#qunit-fixture').text(), 'This is the third message');
+  equal(jQuery('p', '#qunit-fixture').text(), 'This is the third message');
   equal(insertionCount, 1, 'view should still have inserted only once');
 
   // Lastly transition to a different view, with the same controller and template
   handleURL('/fourth');
 
-  equal(Ember.$('p', '#qunit-fixture').text(), 'This is the fourth message');
+  equal(jQuery('p', '#qunit-fixture').text(), 'This is the fourth message');
   equal(insertionCount, 2, 'view should have inserted a second time');
 });
 
@@ -2486,7 +2497,7 @@ QUnit.test('ApplicationRoute with model does not proxy the currentPath', functio
 QUnit.test('Promises encountered on app load put app into loading state until resolved', function() {
   expect(2);
 
-  var deferred = Ember.RSVP.defer();
+  var deferred = RSVP.defer();
 
   App.IndexRoute = Ember.Route.extend({
     model() {
@@ -2499,9 +2510,9 @@ QUnit.test('Promises encountered on app load put app into loading state until re
 
   bootApplication();
 
-  equal(Ember.$('p', '#qunit-fixture').text(), 'LOADING', 'The loading state is displaying.');
-  Ember.run(deferred.resolve);
-  equal(Ember.$('p', '#qunit-fixture').text(), 'INDEX', 'The index route is display.');
+  equal(jQuery('p', '#qunit-fixture').text(), 'LOADING', 'The loading state is displaying.');
+  run(deferred.resolve);
+  equal(jQuery('p', '#qunit-fixture').text(), 'INDEX', 'The index route is display.');
 });
 
 QUnit.test('Route should tear down multiple outlets', function() {
@@ -2554,15 +2565,15 @@ QUnit.test('Route should tear down multiple outlets', function() {
 
   handleURL('/posts');
 
-  equal(Ember.$('div.posts-menu:contains(postsMenu)', '#qunit-fixture').length, 1, 'The posts/menu template was rendered');
-  equal(Ember.$('p.posts-index:contains(postsIndex)', '#qunit-fixture').length, 1, 'The posts/index template was rendered');
-  equal(Ember.$('div.posts-footer:contains(postsFooter)', '#qunit-fixture').length, 1, 'The posts/footer template was rendered');
+  equal(jQuery('div.posts-menu:contains(postsMenu)', '#qunit-fixture').length, 1, 'The posts/menu template was rendered');
+  equal(jQuery('p.posts-index:contains(postsIndex)', '#qunit-fixture').length, 1, 'The posts/index template was rendered');
+  equal(jQuery('div.posts-footer:contains(postsFooter)', '#qunit-fixture').length, 1, 'The posts/footer template was rendered');
 
   handleURL('/users');
 
-  equal(Ember.$('div.posts-menu:contains(postsMenu)', '#qunit-fixture').length, 0, 'The posts/menu template was removed');
-  equal(Ember.$('p.posts-index:contains(postsIndex)', '#qunit-fixture').length, 0, 'The posts/index template was removed');
-  equal(Ember.$('div.posts-footer:contains(postsFooter)', '#qunit-fixture').length, 0, 'The posts/footer template was removed');
+  equal(jQuery('div.posts-menu:contains(postsMenu)', '#qunit-fixture').length, 0, 'The posts/menu template was removed');
+  equal(jQuery('p.posts-index:contains(postsIndex)', '#qunit-fixture').length, 0, 'The posts/index template was removed');
+  equal(jQuery('div.posts-footer:contains(postsFooter)', '#qunit-fixture').length, 0, 'The posts/footer template was removed');
 });
 
 
@@ -2640,29 +2651,29 @@ QUnit.test('Route supports clearing outlet explicitly', function() {
 
   handleURL('/posts');
 
-  equal(Ember.$('div.posts-index:contains(postsIndex)', '#qunit-fixture').length, 1, 'The posts/index template was rendered');
-  Ember.run(function() {
+  equal(jQuery('div.posts-index:contains(postsIndex)', '#qunit-fixture').length, 1, 'The posts/index template was rendered');
+  run(function() {
     router.send('showModal');
   });
-  equal(Ember.$('div.posts-modal:contains(postsModal)', '#qunit-fixture').length, 1, 'The posts/modal template was rendered');
-  Ember.run(function() {
+  equal(jQuery('div.posts-modal:contains(postsModal)', '#qunit-fixture').length, 1, 'The posts/modal template was rendered');
+  run(function() {
     router.send('showExtra');
   });
-  equal(Ember.$('div.posts-extra:contains(postsExtra)', '#qunit-fixture').length, 1, 'The posts/extra template was rendered');
-  Ember.run(function() {
+  equal(jQuery('div.posts-extra:contains(postsExtra)', '#qunit-fixture').length, 1, 'The posts/extra template was rendered');
+  run(function() {
     router.send('hideModal');
   });
-  equal(Ember.$('div.posts-modal:contains(postsModal)', '#qunit-fixture').length, 0, 'The posts/modal template was removed');
-  Ember.run(function() {
+  equal(jQuery('div.posts-modal:contains(postsModal)', '#qunit-fixture').length, 0, 'The posts/modal template was removed');
+  run(function() {
     router.send('hideExtra');
   });
-  equal(Ember.$('div.posts-extra:contains(postsExtra)', '#qunit-fixture').length, 0, 'The posts/extra template was removed');
+  equal(jQuery('div.posts-extra:contains(postsExtra)', '#qunit-fixture').length, 0, 'The posts/extra template was removed');
 
   handleURL('/users');
 
-  equal(Ember.$('div.posts-index:contains(postsIndex)', '#qunit-fixture').length, 0, 'The posts/index template was removed');
-  equal(Ember.$('div.posts-modal:contains(postsModal)', '#qunit-fixture').length, 0, 'The posts/modal template was removed');
-  equal(Ember.$('div.posts-extra:contains(postsExtra)', '#qunit-fixture').length, 0, 'The posts/extra template was removed');
+  equal(jQuery('div.posts-index:contains(postsIndex)', '#qunit-fixture').length, 0, 'The posts/index template was removed');
+  equal(jQuery('div.posts-modal:contains(postsModal)', '#qunit-fixture').length, 0, 'The posts/modal template was removed');
+  equal(jQuery('div.posts-extra:contains(postsExtra)', '#qunit-fixture').length, 0, 'The posts/extra template was removed');
 });
 
 QUnit.test('Route supports clearing outlet using string parameter', function() {
@@ -2704,20 +2715,20 @@ QUnit.test('Route supports clearing outlet using string parameter', function() {
 
   handleURL('/posts');
 
-  equal(Ember.$('div.posts-index:contains(postsIndex)', '#qunit-fixture').length, 1, 'The posts/index template was rendered');
-  Ember.run(function() {
+  equal(jQuery('div.posts-index:contains(postsIndex)', '#qunit-fixture').length, 1, 'The posts/index template was rendered');
+  run(function() {
     router.send('showModal');
   });
-  equal(Ember.$('div.posts-modal:contains(postsModal)', '#qunit-fixture').length, 1, 'The posts/modal template was rendered');
-  Ember.run(function() {
+  equal(jQuery('div.posts-modal:contains(postsModal)', '#qunit-fixture').length, 1, 'The posts/modal template was rendered');
+  run(function() {
     router.send('hideModal');
   });
-  equal(Ember.$('div.posts-modal:contains(postsModal)', '#qunit-fixture').length, 0, 'The posts/modal template was removed');
+  equal(jQuery('div.posts-modal:contains(postsModal)', '#qunit-fixture').length, 0, 'The posts/modal template was removed');
 
   handleURL('/users');
 
-  equal(Ember.$('div.posts-index:contains(postsIndex)', '#qunit-fixture').length, 0, 'The posts/index template was removed');
-  equal(Ember.$('div.posts-modal:contains(postsModal)', '#qunit-fixture').length, 0, 'The posts/modal template was removed');
+  equal(jQuery('div.posts-index:contains(postsIndex)', '#qunit-fixture').length, 0, 'The posts/index template was removed');
+  equal(jQuery('div.posts-modal:contains(postsModal)', '#qunit-fixture').length, 0, 'The posts/modal template was removed');
 });
 
 QUnit.test('Route silently fails when cleaning an outlet from an inactive view', function() {
@@ -2749,9 +2760,9 @@ QUnit.test('Route silently fails when cleaning an outlet from an inactive view',
 
   handleURL('/posts');
 
-  Ember.run(function() { router.send('showModal'); });
-  Ember.run(function() { router.send('hideSelf'); });
-  Ember.run(function() { router.send('hideModal'); });
+  run(function() { router.send('showModal'); });
+  run(function() { router.send('hideSelf'); });
+  run(function() { router.send('hideModal'); });
 });
 
 QUnit.test('Router `willTransition` hook passes in cancellable transition', function() {
@@ -2796,8 +2807,8 @@ QUnit.test('Router `willTransition` hook passes in cancellable transition', func
   bootApplication();
 
   // Attempted transitions out of index should abort.
-  Ember.run(router, 'handleURL', '/nork');
-  Ember.run(router, 'handleURL', '/about');
+  run(router, 'handleURL', '/nork');
+  run(router, 'handleURL', '/about');
 });
 
 QUnit.test('Aborting/redirecting the transition in `willTransition` prevents LoadingRoute from being entered', function() {
@@ -2853,20 +2864,20 @@ QUnit.test('Aborting/redirecting the transition in `willTransition` prevents Loa
   bootApplication();
 
   // Attempted transitions out of index should abort.
-  Ember.run(router, 'transitionTo', 'nork');
-  Ember.run(router, 'handleURL', '/nork');
+  run(router, 'transitionTo', 'nork');
+  run(router, 'handleURL', '/nork');
 
   // Attempted transitions out of index should redirect to about
   redirect = true;
-  Ember.run(router, 'transitionTo', 'nork');
-  Ember.run(router, 'transitionTo', 'index');
+  run(router, 'transitionTo', 'nork');
+  run(router, 'transitionTo', 'index');
 
   // Redirected transitions out of index to a route with a
   // promise model should pause the transition and
   // activate LoadingRoute
-  deferred = Ember.RSVP.defer();
-  Ember.run(router, 'transitionTo', 'nork');
-  Ember.run(deferred.resolve);
+  deferred = RSVP.defer();
+  run(router, 'transitionTo', 'nork');
+  run(deferred.resolve);
 });
 
 QUnit.test('`didTransition` event fires on the router', function() {
@@ -2889,7 +2900,7 @@ QUnit.test('`didTransition` event fires on the router', function() {
     equal(router.get('url'), '/nork', 'The url property is updated by the time didTransition fires');
   });
 
-  Ember.run(router, 'transitionTo', 'nork');
+  run(router, 'transitionTo', 'nork');
 });
 QUnit.test('`didTransition` can be reopened', function() {
   expect(1);
@@ -2933,7 +2944,7 @@ QUnit.test('`activate` event fires on the route', function() {
 
   bootApplication();
 
-  Ember.run(router, 'transitionTo', 'nork');
+  run(router, 'transitionTo', 'nork');
 });
 
 QUnit.test('`deactivate` event fires on the route', function() {
@@ -2962,8 +2973,8 @@ QUnit.test('`deactivate` event fires on the route', function() {
 
   bootApplication();
 
-  Ember.run(router, 'transitionTo', 'nork');
-  Ember.run(router, 'transitionTo', 'dork');
+  run(router, 'transitionTo', 'nork');
+  run(router, 'transitionTo', 'dork');
 });
 
 QUnit.test('Actions can be handled by inherited action handlers', function() {
@@ -3024,7 +3035,7 @@ QUnit.test('currentRouteName is a property installed on ApplicationController th
   var appController = router.container.lookup('controller:application');
 
   function transitionAndCheck(path, expectedPath, expectedRouteName) {
-    if (path) { Ember.run(router, 'transitionTo', path); }
+    if (path) { run(router, 'transitionTo', path); }
     equal(appController.get('currentPath'), expectedPath);
     equal(appController.get('currentRouteName'), expectedRouteName);
   }
@@ -3046,7 +3057,7 @@ QUnit.test('currentRouteName is a property installed on ApplicationController th
 
 QUnit.test('Route model hook finds the same model as a manual find', function() {
   var Post;
-  App.Post = Ember.Object.extend();
+  App.Post = EmberObject.extend();
   App.Post.reopenClass({
     find() {
       Post = this;
@@ -3105,13 +3116,13 @@ QUnit.test('Routes can refresh themselves causing their model hooks to be re-run
   equal(parentcount, 0);
   equal(childcount, 0);
 
-  Ember.run(router, 'transitionTo', 'parent.child', '123');
+  run(router, 'transitionTo', 'parent.child', '123');
 
   equal(appcount, 1);
   equal(parentcount, 1);
   equal(childcount, 1);
 
-  Ember.run(router, 'send', 'refreshParent');
+  run(router, 'send', 'refreshParent');
 
   equal(appcount, 1);
   equal(parentcount, 2);
@@ -3173,7 +3184,7 @@ QUnit.test('rejecting the model hooks promise with a non-error prints the `messa
     this.route('yippie', { path: '/' });
   });
 
-  Ember.Logger.error = function(initialMessage, errorMessage, errorStack) {
+  Logger.error = function(initialMessage, errorMessage, errorStack) {
     equal(initialMessage, 'Error while processing route: yippie', 'a message with the current route name is printed');
     equal(errorMessage, rejectedMessage, 'the rejected reason\'s message property is logged');
     equal(errorStack, rejectedStack, 'the rejected reason\'s stack property is logged');
@@ -3181,7 +3192,7 @@ QUnit.test('rejecting the model hooks promise with a non-error prints the `messa
 
   App.YippieRoute = Ember.Route.extend({
     model() {
-      return Ember.RSVP.reject({ message: rejectedMessage, stack: rejectedStack });
+      return RSVP.reject({ message: rejectedMessage, stack: rejectedStack });
     }
   });
 
@@ -3202,7 +3213,7 @@ QUnit.test('rejecting the model hooks promise with an error with `errorThrown` p
     this.route('yippie', { path: '/' });
   });
 
-  Ember.Logger.error = function(initialMessage, errorMessage, errorStack) {
+  Logger.error = function(initialMessage, errorMessage, errorStack) {
     equal(initialMessage, 'Error while processing route: yippie', 'a message with the current route name is printed');
     equal(errorMessage, rejectedMessage, 'the rejected reason\'s message property is logged');
     equal(errorStack, rejectedStack, 'the rejected reason\'s stack property is logged');
@@ -3210,7 +3221,7 @@ QUnit.test('rejecting the model hooks promise with an error with `errorThrown` p
 
   App.YippieRoute = Ember.Route.extend({
     model() {
-      return Ember.RSVP.reject({
+      return RSVP.reject({
         errorThrown: { message: rejectedMessage, stack: rejectedStack }
       });
     }
@@ -3229,13 +3240,13 @@ QUnit.test('rejecting the model hooks promise with no reason still logs error', 
     this.route('wowzers', { path: '/' });
   });
 
-  Ember.Logger.error = function(initialMessage) {
+  Logger.error = function(initialMessage) {
     equal(initialMessage, 'Error while processing route: wowzers', 'a message with the current route name is printed');
   };
 
   App.WowzersRoute = Ember.Route.extend({
     model() {
-      return Ember.RSVP.reject();
+      return RSVP.reject();
     }
   });
 
@@ -3244,21 +3255,21 @@ QUnit.test('rejecting the model hooks promise with no reason still logs error', 
 
 QUnit.test('rejecting the model hooks promise with a string shows a good error', function() {
   expect(3);
-  var originalLoggerError = Ember.Logger.error;
+  var originalLoggerError = Logger.error;
   var rejectedMessage = 'Supercalifragilisticexpialidocious';
 
   Router.map(function() {
     this.route('yondo', { path: '/' });
   });
 
-  Ember.Logger.error = function(initialMessage, errorMessage) {
+  Logger.error = function(initialMessage, errorMessage) {
     equal(initialMessage, 'Error while processing route: yondo', 'a message with the current route name is printed');
     equal(errorMessage, rejectedMessage, 'the rejected reason\'s message property is logged');
   };
 
   App.YondoRoute = Ember.Route.extend({
     model() {
-      return Ember.RSVP.reject(rejectedMessage);
+      return RSVP.reject(rejectedMessage);
     }
   });
 
@@ -3266,7 +3277,7 @@ QUnit.test('rejecting the model hooks promise with a string shows a good error',
     bootApplication();
   }, rejectedMessage, 'expected an exception');
 
-  Ember.Logger.error = originalLoggerError;
+  Logger.error = originalLoggerError;
 });
 
 QUnit.test('willLeave, willChangeContext, willChangeModel actions don\'t fire unless feature flag enabled', function() {
@@ -3295,7 +3306,7 @@ QUnit.test('willLeave, willChangeContext, willChangeModel actions don\'t fire un
   });
 
   bootApplication();
-  Ember.run(router, 'transitionTo', 'about');
+  run(router, 'transitionTo', 'about');
 });
 
 QUnit.test('Errors in transitionTo within redirect hook are logged', function() {
@@ -3313,7 +3324,7 @@ QUnit.test('Errors in transitionTo within redirect hook are logged', function() 
     }
   });
 
-  Ember.Logger.error = function() {
+  Logger.error = function() {
     // push the arguments onto an array so we can detect if the error gets logged twice
     actual.push(arguments);
   };
@@ -3345,7 +3356,7 @@ QUnit.test('Errors in transition show error template if available', function() {
     bootApplication();
   }, /More context objects were passed/);
 
-  equal(Ember.$('#error').length, 1, 'Error template was rendered.');
+  equal(jQuery('#error').length, 1, 'Error template was rendered.');
 });
 
 QUnit.test('Route#resetController gets fired when changing models and exiting routes', function() {
@@ -3379,15 +3390,15 @@ QUnit.test('Route#resetController gets fired when changing models and exiting ro
   bootApplication();
   deepEqual(calls, []);
 
-  Ember.run(router, 'transitionTo', 'b', 'b-1');
+  run(router, 'transitionTo', 'b', 'b-1');
   deepEqual(calls, [['setup', 'a'], ['setup', 'b']]);
   calls.length = 0;
 
-  Ember.run(router, 'transitionTo', 'c', 'c-1');
+  run(router, 'transitionTo', 'c', 'c-1');
   deepEqual(calls, [['reset', 'b'], ['setup', 'c']]);
   calls.length = 0;
 
-  Ember.run(router, 'transitionTo', 'out');
+  run(router, 'transitionTo', 'out');
   deepEqual(calls, [['reset', 'c'], ['reset', 'a'], ['setup', 'out']]);
 });
 
@@ -3402,7 +3413,7 @@ QUnit.test('Exception during initialization of non-initial route is not swallowe
   });
   bootApplication();
   throws(function() {
-    Ember.run(router, 'transitionTo', 'boom');
+    run(router, 'transitionTo', 'boom');
   }, /\bboom\b/);
 });
 
@@ -3425,7 +3436,7 @@ QUnit.test('Exception during load of non-initial route is not swallowed', functi
   });
   bootApplication();
   throws(function() {
-    Ember.run(router, 'transitionTo', 'boom');
+    run(router, 'transitionTo', 'boom');
   });
 });
 
@@ -3477,17 +3488,17 @@ QUnit.test('{{outlet}} works when created after initial render', function() {
 
   bootApplication();
 
-  equal(Ember.$('#qunit-fixture').text(), 'HiBye', 'initial render');
+  equal(jQuery('#qunit-fixture').text(), 'HiBye', 'initial render');
 
-  Ember.run(function() {
+  run(function() {
     container.lookup('controller:sample').set('showTheThing', true);
   });
 
-  equal(Ember.$('#qunit-fixture').text(), 'HiYayBye', 'second render');
+  equal(jQuery('#qunit-fixture').text(), 'HiYayBye', 'second render');
 
   handleURL('/2');
 
-  equal(Ember.$('#qunit-fixture').text(), 'HiBooBye', 'third render');
+  equal(jQuery('#qunit-fixture').text(), 'HiBooBye', 'third render');
 });
 
 QUnit.test('Can rerender application view multiple times when it contains an outlet', function() {
@@ -3500,19 +3511,19 @@ QUnit.test('Can rerender application view multiple times when it contains an out
 
   bootApplication();
 
-  equal(Ember.$('#qunit-fixture').text(), 'AppHello world', 'initial render');
+  equal(jQuery('#qunit-fixture').text(), 'AppHello world', 'initial render');
 
-  Ember.run(function() {
+  run(function() {
     EmberView.views['im-special'].rerender();
   });
 
-  equal(Ember.$('#qunit-fixture').text(), 'AppHello world', 'second render');
+  equal(jQuery('#qunit-fixture').text(), 'AppHello world', 'second render');
 
-  Ember.run(function() {
+  run(function() {
     EmberView.views['im-special'].rerender();
   });
 
-  equal(Ember.$('#qunit-fixture').text(), 'AppHello world', 'third render');
+  equal(jQuery('#qunit-fixture').text(), 'AppHello world', 'third render');
 });
 
 QUnit.test('Can render into a named outlet at the top level', function() {
@@ -3532,7 +3543,7 @@ QUnit.test('Can render into a named outlet at the top level', function() {
 
   bootApplication();
 
-  equal(Ember.$('#qunit-fixture').text(), 'A-The index-B-Hello world-C', 'initial render');
+  equal(jQuery('#qunit-fixture').text(), 'A-The index-B-Hello world-C', 'initial render');
 });
 
 QUnit.test('Can disconnect a named outlet at the top level', function() {
@@ -3560,11 +3571,11 @@ QUnit.test('Can disconnect a named outlet at the top level', function() {
 
   bootApplication();
 
-  equal(Ember.$('#qunit-fixture').text(), 'A-The index-B-Hello world-C', 'initial render');
+  equal(jQuery('#qunit-fixture').text(), 'A-The index-B-Hello world-C', 'initial render');
 
-  Ember.run(router, 'send', 'banish');
+  run(router, 'send', 'banish');
 
-  equal(Ember.$('#qunit-fixture').text(), 'A-The index-B--C', 'second render');
+  equal(jQuery('#qunit-fixture').text(), 'A-The index-B--C', 'second render');
 });
 
 QUnit.test('Can render into a named outlet at the top level, with empty main outlet', function() {
@@ -3587,7 +3598,7 @@ QUnit.test('Can render into a named outlet at the top level, with empty main out
 
   bootApplication();
 
-  equal(Ember.$('#qunit-fixture').text(), 'A--B-Hello world-C', 'initial render');
+  equal(jQuery('#qunit-fixture').text(), 'A--B-Hello world-C', 'initial render');
 });
 
 
@@ -3609,11 +3620,11 @@ QUnit.test('Can render into a named outlet at the top level, later', function() 
 
   bootApplication();
 
-  equal(Ember.$('#qunit-fixture').text(), 'A-The index-B--C', 'initial render');
+  equal(jQuery('#qunit-fixture').text(), 'A-The index-B--C', 'initial render');
 
-  Ember.run(router, 'send', 'launch');
+  run(router, 'send', 'launch');
 
-  equal(Ember.$('#qunit-fixture').text(), 'A-The index-B-Hello world-C', 'second render');
+  equal(jQuery('#qunit-fixture').text(), 'A-The index-B-Hello world-C', 'second render');
 });
 
 QUnit.test('Can render routes with no \'main\' outlet and their children', function() {
@@ -3652,10 +3663,10 @@ QUnit.test('Can render routes with no \'main\' outlet and their children', funct
 
   bootApplication();
   handleURL('/app');
-  equal(Ember.$('#app-common #common').length, 1, 'Finds common while viewing /app');
+  equal(jQuery('#app-common #common').length, 1, 'Finds common while viewing /app');
   handleURL('/app/sub');
-  equal(Ember.$('#app-common #common').length, 1, 'Finds common while viewing /app/sub');
-  equal(Ember.$('#app-sub #sub').length, 1, 'Finds sub while viewing /app/sub');
+  equal(jQuery('#app-common #common').length, 1, 'Finds common while viewing /app/sub');
+  equal(jQuery('#app-sub #sub').length, 1, 'Finds sub while viewing /app/sub');
 });
 
 QUnit.test('Tolerates stacked renders', function() {
@@ -3679,13 +3690,13 @@ QUnit.test('Tolerates stacked renders', function() {
     }
   });
   bootApplication();
-  equal(trim(Ember.$('#qunit-fixture').text()), 'hi');
-  Ember.run(router, 'send', 'openLayer');
-  equal(trim(Ember.$('#qunit-fixture').text()), 'hilayer');
-  Ember.run(router, 'send', 'openLayer');
-  equal(trim(Ember.$('#qunit-fixture').text()), 'hilayer');
-  Ember.run(router, 'send', 'close');
-  equal(trim(Ember.$('#qunit-fixture').text()), 'hi');
+  equal(trim(jQuery('#qunit-fixture').text()), 'hi');
+  run(router, 'send', 'openLayer');
+  equal(trim(jQuery('#qunit-fixture').text()), 'hilayer');
+  run(router, 'send', 'openLayer');
+  equal(trim(jQuery('#qunit-fixture').text()), 'hilayer');
+  run(router, 'send', 'close');
+  equal(trim(jQuery('#qunit-fixture').text()), 'hi');
 });
 
 QUnit.test('Renders child into parent with non-default template name', function() {
@@ -3712,7 +3723,7 @@ QUnit.test('Renders child into parent with non-default template name', function(
 
   bootApplication();
   handleURL('/root');
-  equal(Ember.$('#qunit-fixture .a .b .c').length, 1);
+  equal(jQuery('#qunit-fixture .a .b .c').length, 1);
 });
 
 QUnit.test('Allows any route to disconnectOutlet another route\'s templates', function() {
@@ -3740,11 +3751,11 @@ QUnit.test('Allows any route to disconnectOutlet another route\'s templates', fu
     }
   });
   bootApplication();
-  equal(trim(Ember.$('#qunit-fixture').text()), 'hi');
-  Ember.run(router, 'send', 'openLayer');
-  equal(trim(Ember.$('#qunit-fixture').text()), 'hilayer');
-  Ember.run(router, 'send', 'close');
-  equal(trim(Ember.$('#qunit-fixture').text()), 'hi');
+  equal(trim(jQuery('#qunit-fixture').text()), 'hi');
+  run(router, 'send', 'openLayer');
+  equal(trim(jQuery('#qunit-fixture').text()), 'hilayer');
+  run(router, 'send', 'close');
+  equal(trim(jQuery('#qunit-fixture').text()), 'hi');
 });
 
 QUnit.test('Can this.render({into:...}) the render helper', function() {
@@ -3769,9 +3780,9 @@ QUnit.test('Can this.render({into:...}) the render helper', function() {
   });
 
   bootApplication();
-  equal(Ember.$('#qunit-fixture .foo').text(), 'other');
-  Ember.run(router, 'send', 'changeToBar');
-  equal(Ember.$('#qunit-fixture .foo').text(), 'bar');
+  equal(jQuery('#qunit-fixture .foo').text(), 'other');
+  run(router, 'send', 'changeToBar');
+  equal(jQuery('#qunit-fixture .foo').text(), 'bar');
 });
 
 QUnit.test('Can disconnect from the render helper', function() {
@@ -3794,9 +3805,9 @@ QUnit.test('Can disconnect from the render helper', function() {
   });
 
   bootApplication();
-  equal(Ember.$('#qunit-fixture .foo').text(), 'other');
-  Ember.run(router, 'send', 'disconnect');
-  equal(Ember.$('#qunit-fixture .foo').text(), '');
+  equal(jQuery('#qunit-fixture .foo').text(), 'other');
+  run(router, 'send', 'disconnect');
+  equal(jQuery('#qunit-fixture .foo').text(), '');
 });
 
 
@@ -3824,9 +3835,9 @@ QUnit.test('Can this.render({into:...}) the render helper\'s children', function
   });
 
   bootApplication();
-  equal(Ember.$('#qunit-fixture .foo .index').text(), 'other');
-  Ember.run(router, 'send', 'changeToBar');
-  equal(Ember.$('#qunit-fixture .foo .index').text(), 'bar');
+  equal(jQuery('#qunit-fixture .foo .index').text(), 'other');
+  run(router, 'send', 'changeToBar');
+  equal(jQuery('#qunit-fixture .foo .index').text(), 'bar');
 });
 
 QUnit.test('Can disconnect from the render helper\'s children', function() {
@@ -3851,9 +3862,9 @@ QUnit.test('Can disconnect from the render helper\'s children', function() {
   });
 
   bootApplication();
-  equal(Ember.$('#qunit-fixture .foo .index').text(), 'other');
-  Ember.run(router, 'send', 'disconnect');
-  equal(Ember.$('#qunit-fixture .foo .index').text(), '');
+  equal(jQuery('#qunit-fixture .foo .index').text(), 'other');
+  run(router, 'send', 'disconnect');
+  equal(jQuery('#qunit-fixture .foo .index').text(), '');
 });
 
 QUnit.test('Can this.render({into:...}) nested render helpers', function() {
@@ -3879,9 +3890,9 @@ QUnit.test('Can this.render({into:...}) nested render helpers', function() {
   });
 
   bootApplication();
-  equal(Ember.$('#qunit-fixture .bar').text(), 'other');
-  Ember.run(router, 'send', 'changeToBaz');
-  equal(Ember.$('#qunit-fixture .bar').text(), 'baz');
+  equal(jQuery('#qunit-fixture .bar').text(), 'other');
+  run(router, 'send', 'changeToBaz');
+  equal(jQuery('#qunit-fixture .bar').text(), 'baz');
 });
 
 QUnit.test('Can disconnect from nested render helpers', function() {
@@ -3905,9 +3916,9 @@ QUnit.test('Can disconnect from nested render helpers', function() {
   });
 
   bootApplication();
-  equal(Ember.$('#qunit-fixture .bar').text(), 'other');
-  Ember.run(router, 'send', 'disconnect');
-  equal(Ember.$('#qunit-fixture .bar').text(), '');
+  equal(jQuery('#qunit-fixture .bar').text(), 'other');
+  run(router, 'send', 'disconnect');
+  equal(jQuery('#qunit-fixture .bar').text(), '');
 });
 
 QUnit.test('Can render with layout', function() {
@@ -3920,7 +3931,7 @@ QUnit.test('Can render with layout', function() {
   });
 
   bootApplication();
-  equal(Ember.$('#qunit-fixture').text(), 'my-layout [index-template]');
+  equal(jQuery('#qunit-fixture').text(), 'my-layout [index-template]');
 });
 
 QUnit.test('Components inside an outlet have their didInsertElement hook invoked when the route is displayed', function(assert) {
@@ -3940,13 +3951,13 @@ QUnit.test('Components inside an outlet have their didInsertElement hook invoked
     }
   });
 
-  App.MyComponentComponent = Ember.Component.extend({
+  App.MyComponentComponent = Component.extend({
     didInsertElement() {
       myComponentCounter++;
     }
   });
 
-  App.OtherComponentComponent = Ember.Component.extend({
+  App.OtherComponentComponent = Component.extend({
     didInsertElement() {
       otherComponentCounter++;
     }
@@ -3957,7 +3968,7 @@ QUnit.test('Components inside an outlet have their didInsertElement hook invoked
   assert.strictEqual(myComponentCounter, 1, 'didInsertElement invoked on displayed component');
   assert.strictEqual(otherComponentCounter, 0, 'didInsertElement not invoked on displayed component');
 
-  Ember.run(function() {
+  run(function() {
     indexController.set('showFirst', false);
   });
 
@@ -3987,7 +3998,7 @@ QUnit.test('Doesnt swallow exception thrown from willTransition', function() {
   bootApplication();
 
   throws(function() {
-    Ember.run(function() {
+    run(function() {
       router.handleURL('/other');
     });
   }, /boom/, 'expected an exception that didnt happen');
@@ -4014,10 +4025,10 @@ QUnit.test('Exception if outlet name is undefined in render and disconnectOutlet
   bootApplication();
 
   throws(function() {
-    Ember.run(function() { router.send('showModal'); });
+    run(function() { router.send('showModal'); });
   }, /You passed undefined as the outlet name/);
 
   throws(function() {
-    Ember.run(function() { router.send('hideModal'); });
+    run(function() { router.send('hideModal'); });
   }, /You passed undefined as the outlet name/);
 });
