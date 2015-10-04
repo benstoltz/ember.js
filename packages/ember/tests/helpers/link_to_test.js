@@ -1,6 +1,8 @@
 import Ember from 'ember-metal/core';
 import Logger from 'ember-metal/logger';
+import Controller from 'ember-runtime/controllers/controller';
 import { set } from 'ember-metal/property_set';
+import Route from 'ember-routing/system/route';
 import run from 'ember-metal/run_loop';
 import isEnabled from 'ember-metal/features';
 import alias from 'ember-metal/alias';
@@ -206,7 +208,7 @@ QUnit.test('the {{link-to}} helper doesn\'t add an href when the tagName isn\'t 
 
 QUnit.test('the {{link-to}} applies a \'disabled\' class when disabled', function () {
   Ember.TEMPLATES.index = compile('{{#link-to "about" id="about-link" disabledWhen="shouldDisable"}}About{{/link-to}}');
-  App.IndexController = Ember.Controller.extend({
+  App.IndexController = Controller.extend({
     shouldDisable: true
   });
 
@@ -262,7 +264,7 @@ QUnit.test('the {{link-to}} helper supports a custom disabledClass set via bound
     this.route('about');
   });
 
-  App.IndexController = Ember.Controller.extend({
+  App.IndexController = Controller.extend({
     disabledClass: 'do-not-want'
   });
 
@@ -302,7 +304,7 @@ QUnit.test('the {{link-to}} helper does not respond to clicks when disabled via 
     this.route('about');
   });
 
-  App.IndexController = Ember.Controller.extend({
+  App.IndexController = Controller.extend({
     disabledWhen: true
   });
 
@@ -344,7 +346,7 @@ QUnit.test('The {{link-to}} helper supports a custom activeClass from a bound pa
     this.route('about');
   });
 
-  App.IndexController = Ember.Controller.extend({
+  App.IndexController = Controller.extend({
     activeClass: 'zomg-active'
   });
 
@@ -366,7 +368,7 @@ QUnit.test('The {{link-to}} helper supports \'classNameBindings\' with custom va
     this.route('about');
   });
 
-  App.IndexController = Ember.Controller.extend({
+  App.IndexController = Controller.extend({
     foo: false
   });
 
@@ -482,7 +484,7 @@ QUnit.test('The {{link-to}} helper does not disregard current-when when it is se
     });
   });
 
-  App.IndexAboutController = Ember.Controller.extend({
+  App.IndexAboutController = Controller.extend({
     currentWhen: 'index'
   });
 
@@ -545,7 +547,7 @@ QUnit.test('The {{link-to}} helper defaults to bubbling', function() {
 
   var hidden = 0;
 
-  App.AboutRoute = Ember.Route.extend({
+  App.AboutRoute = Route.extend({
     actions: {
       hide() {
         hidden++;
@@ -580,7 +582,7 @@ QUnit.test('The {{link-to}} helper supports bubbles=false', function() {
 
   var hidden = 0;
 
-  App.AboutRoute = Ember.Route.extend({
+  App.AboutRoute = Route.extend({
     actions: {
       hide() {
         hidden++;
@@ -611,7 +613,7 @@ QUnit.test('The {{link-to}} helper moves into the named route with context', fun
 
   Ember.TEMPLATES.about = compile('<h3>List</h3><ul>{{#each model as |person|}}<li>{{#link-to \'item\' person}}{{person.name}}{{/link-to}}</li>{{/each}}</ul>{{#link-to \'index\' id=\'home-link\'}}Home{{/link-to}}');
 
-  App.AboutRoute = Ember.Route.extend({
+  App.AboutRoute = Route.extend({
     model() {
       return emberA([
         { id: 'yehuda', name: 'Yehuda Katz' },
@@ -621,7 +623,7 @@ QUnit.test('The {{link-to}} helper moves into the named route with context', fun
     }
   });
 
-  App.ItemRoute = Ember.Route.extend({
+  App.ItemRoute = Route.extend({
     serialize(object) {
       return { id: object.id };
     }
@@ -739,7 +741,7 @@ QUnit.test('The {{link-to}} helper accepts string/numeric arguments', function()
     this.route('repo', { path: '/repo/:owner/:name' });
   });
 
-  App.FilterController = Ember.Controller.extend({
+  App.FilterController = Controller.extend({
     filter: 'unpopular',
     repo: EmberObject.create({ owner: 'ember', name: 'ember.js' }),
     post_id: 123
@@ -768,7 +770,7 @@ QUnit.test('Issue 4201 - Shorthand for route.index shouldn\'t throw errors about
     });
   });
 
-  App.LobbyIndexRoute = Ember.Route.extend({
+  App.LobbyIndexRoute = Route.extend({
     model(params) {
       equal(params.lobby_id, 'foobar');
       return params.lobby_id;
@@ -793,7 +795,7 @@ QUnit.test('The {{link-to}} helper unwraps controllers', function() {
 
   var indexObject = { filter: 'popular' };
 
-  App.FilterRoute = Ember.Route.extend({
+  App.FilterRoute = Route.extend({
     model(params) {
       return indexObject;
     },
@@ -804,7 +806,7 @@ QUnit.test('The {{link-to}} helper unwraps controllers', function() {
     }
   });
 
-  App.IndexRoute = Ember.Route.extend({
+  App.IndexRoute = Route.extend({
     model() {
       return indexObject;
     }
@@ -854,7 +856,7 @@ QUnit.test('Quoteless route param performs property lookup', function() {
     elementId: 'index-view'
   });
 
-  App.IndexController = Ember.Controller.extend({
+  App.IndexController = Controller.extend({
     foo: 'index'
   });
 
@@ -888,13 +890,13 @@ QUnit.test('link-to with null/undefined dynamic parameters are put in a loading 
 
   var thing = EmberObject.create({ id: 123 });
 
-  App.IndexController = Ember.Controller.extend({
+  App.IndexController = Controller.extend({
     destinationRoute: null,
     routeContext: null,
     loadingClass: 'i-am-loading'
   });
 
-  App.AboutRoute = Ember.Route.extend({
+  App.AboutRoute = Route.extend({
     activate() {
       ok(true, 'About was entered');
     }
@@ -977,7 +979,7 @@ QUnit.test('The {{link-to}} helper refreshes href element when one of params cha
 
   Ember.TEMPLATES.index = compile('{{#link-to "post" post id="post"}}post{{/link-to}}');
 
-  App.IndexController = Ember.Controller.extend();
+  App.IndexController = Controller.extend();
   var indexController = container.lookup('controller:index');
 
   run(function() { indexController.set('post', post); });
@@ -1029,7 +1031,7 @@ QUnit.test('The {{link-to}} helper works in an #each\'d array of string route na
     this.route('rar');
   });
 
-  App.IndexController = Ember.Controller.extend({
+  App.IndexController = Controller.extend({
     routeNames: emberA(['foo', 'bar', 'rar']),
     route1: 'bar',
     route2: 'foo'
@@ -1090,7 +1092,7 @@ QUnit.test('The non-block form {{link-to}} helper updates the link text when it 
     this.route('contact');
   });
 
-  App.IndexController = Ember.Controller.extend({
+  App.IndexController = Controller.extend({
     contactName: 'Jane'
   });
 
@@ -1138,7 +1140,7 @@ QUnit.test('The non-block form {{link-to}} helper moves into the named route wit
     this.route('item', { path: '/item/:id' });
   });
 
-  App.IndexRoute = Ember.Route.extend({
+  App.IndexRoute = Route.extend({
     model() {
       return emberA([
         { id: 'yehuda', name: 'Yehuda Katz' },
@@ -1148,7 +1150,7 @@ QUnit.test('The non-block form {{link-to}} helper moves into the named route wit
     }
   });
 
-  App.ItemRoute = Ember.Route.extend({
+  App.ItemRoute = Route.extend({
     serialize(object) {
       return { id: object.id };
     }
@@ -1187,7 +1189,7 @@ QUnit.test('The non-block form {{link-to}} performs property lookup', function()
     elementId: 'index-view'
   });
 
-  App.IndexController = Ember.Controller.extend({
+  App.IndexController = Controller.extend({
     foo: 'index'
   });
 
@@ -1214,7 +1216,7 @@ QUnit.test('The non-block form {{link-to}} performs property lookup', function()
 QUnit.test('The non-block form {{link-to}} protects against XSS', function() {
   Ember.TEMPLATES.application = compile('{{link-to display \'index\' id=\'link\'}}');
 
-  App.ApplicationController = Ember.Controller.extend({
+  App.ApplicationController = Controller.extend({
     display: 'blahzorz'
   });
 
@@ -1270,12 +1272,12 @@ QUnit.test('the {{link-to}} helper does not throw an error if its route has exit
 
   Ember.TEMPLATES.application = compile('{{#link-to \'index\' id=\'home-link\'}}Home{{/link-to}}{{#link-to \'post\' defaultPost id=\'default-post-link\'}}Default Post{{/link-to}}{{#if currentPost}}{{#link-to \'post\' id=\'post-link\'}}Post{{/link-to}}{{/if}}');
 
-  App.ApplicationController = Ember.Controller.extend({
+  App.ApplicationController = Controller.extend({
     postController: inject.controller('post'),
     currentPost: alias('postController.model')
   });
 
-  App.PostController = Ember.Controller.extend({
+  App.PostController = Controller.extend({
     model: { id: 1 }
   });
 
@@ -1322,7 +1324,7 @@ QUnit.test('{{link-to}} active property respects changing parent route context',
 
 QUnit.test('{{link-to}} populates href with default query param values even without query-params object', function() {
   if (isEnabled('ember-routing-route-configured-query-params')) {
-    App.IndexRoute = Ember.Route.extend({
+    App.IndexRoute = Route.extend({
       queryParams: {
         foo: {
           defaultValue: '123'
@@ -1330,7 +1332,7 @@ QUnit.test('{{link-to}} populates href with default query param values even with
       }
     });
   } else {
-    App.IndexController = Ember.Controller.extend({
+    App.IndexController = Controller.extend({
       queryParams: ['foo'],
       foo: '123'
     });
@@ -1343,7 +1345,7 @@ QUnit.test('{{link-to}} populates href with default query param values even with
 
 QUnit.test('{{link-to}} populates href with default query param values with empty query-params object', function() {
   if (isEnabled('ember-routing-route-configured-query-params')) {
-    App.IndexRoute = Ember.Route.extend({
+    App.IndexRoute = Route.extend({
       queryParams: {
         foo: {
           defaultValue: '123'
@@ -1351,7 +1353,7 @@ QUnit.test('{{link-to}} populates href with default query param values with empt
       }
     });
   } else {
-    App.IndexController = Ember.Controller.extend({
+    App.IndexController = Controller.extend({
       queryParams: ['foo'],
       foo: '123'
     });
@@ -1364,7 +1366,7 @@ QUnit.test('{{link-to}} populates href with default query param values with empt
 
 QUnit.test('{{link-to}} populates href with supplied query param values', function() {
   if (isEnabled('ember-routing-route-configured-query-params')) {
-    App.IndexRoute = Ember.Route.extend({
+    App.IndexRoute = Route.extend({
       queryParams: {
         foo: {
           defaultValue: '123'
@@ -1372,7 +1374,7 @@ QUnit.test('{{link-to}} populates href with supplied query param values', functi
       }
     });
   } else {
-    App.IndexController = Ember.Controller.extend({
+    App.IndexController = Controller.extend({
       queryParams: ['foo'],
       foo: '123'
     });
@@ -1385,7 +1387,7 @@ QUnit.test('{{link-to}} populates href with supplied query param values', functi
 
 QUnit.test('{{link-to}} populates href with partially supplied query param values', function() {
   if (isEnabled('ember-routing-route-configured-query-params')) {
-    App.IndexRoute = Ember.Route.extend({
+    App.IndexRoute = Route.extend({
       queryParams: {
         foo: {
           defaultValue: '123'
@@ -1396,7 +1398,7 @@ QUnit.test('{{link-to}} populates href with partially supplied query param value
       }
     });
   } else {
-    App.IndexController = Ember.Controller.extend({
+    App.IndexController = Controller.extend({
       queryParams: ['foo'],
       foo: '123',
       bar: 'yes'
@@ -1410,7 +1412,7 @@ QUnit.test('{{link-to}} populates href with partially supplied query param value
 
 QUnit.test('{{link-to}} populates href with partially supplied query param values, but omits if value is default value', function() {
   if (isEnabled('ember-routing-route-configured-query-params')) {
-    App.IndexRoute = Ember.Route.extend({
+    App.IndexRoute = Route.extend({
       queryParams: {
         foo: {
           defaultValue: '123'
@@ -1418,7 +1420,7 @@ QUnit.test('{{link-to}} populates href with partially supplied query param value
       }
     });
   } else {
-    App.IndexController = Ember.Controller.extend({
+    App.IndexController = Controller.extend({
       queryParams: ['foo'],
       foo: '123'
     });
@@ -1431,7 +1433,7 @@ QUnit.test('{{link-to}} populates href with partially supplied query param value
 
 QUnit.test('{{link-to}} populates href with fully supplied query param values', function() {
   if (isEnabled('ember-routing-route-configured-query-params')) {
-    App.IndexRoute = Ember.Route.extend({
+    App.IndexRoute = Route.extend({
       queryParams: {
         foo: {
           defaultValue: '123'
@@ -1442,7 +1444,7 @@ QUnit.test('{{link-to}} populates href with fully supplied query param values', 
       }
     });
   } else {
-    App.IndexController = Ember.Controller.extend({
+    App.IndexController = Controller.extend({
       queryParams: ['foo', 'bar'],
       foo: '123',
       bar: 'yes'
@@ -1460,7 +1462,7 @@ QUnit.test('{{link-to}} with only query-params and a block updates when route ch
   });
 
   if (isEnabled('ember-routing-route-configured-query-params')) {
-    App.ApplicationRoute = Ember.Route.extend({
+    App.ApplicationRoute = Route.extend({
       queryParams: {
         foo: {
           defaultValue: '123'
@@ -1471,7 +1473,7 @@ QUnit.test('{{link-to}} with only query-params and a block updates when route ch
       }
     });
   } else {
-    App.ApplicationController = Ember.Controller.extend({
+    App.ApplicationController = Controller.extend({
       queryParams: ['foo', 'bar'],
       foo: '123',
       bar: 'yes'
@@ -1494,7 +1496,7 @@ QUnit.test('Block-less {{link-to}} with only query-params updates when route cha
   });
 
   if (isEnabled('ember-routing-route-configured-query-params')) {
-    App.ApplicationRoute = Ember.Route.extend({
+    App.ApplicationRoute = Route.extend({
       queryParams: {
         foo: {
           defaultValue: '123'
@@ -1505,7 +1507,7 @@ QUnit.test('Block-less {{link-to}} with only query-params updates when route cha
       }
     });
   } else {
-    App.ApplicationController = Ember.Controller.extend({
+    App.ApplicationController = Controller.extend({
       queryParams: ['foo', 'bar'],
       foo: '123',
       bar: 'yes'
