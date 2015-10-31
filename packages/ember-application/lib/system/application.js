@@ -754,11 +754,14 @@ var Application = Namespace.extend(RegistryProxy, {
     this._runInitializer('initializers', function(name, initializer) {
       assert('No application initializer named \'' + name + '\'', !!initializer);
       if (initializer.initialize.length === 2) {
-        if (isEnabled('ember-registry-container-reform')) {
-          deprecate('The `initialize` method for Application initializer \'' + name + '\' should take only one argument - `App`, an instance of an `Application`.',
-                          false,
-                          { id: 'ember-application.app-initializer-initialize-arguments', until: '3.0.0' });
-        }
+        deprecate('The `initialize` method for Application initializer \'' + name + '\' should take only one argument - `App`, an instance of an `Application`.',
+                  false,
+                  {
+                    id: 'ember-application.app-initializer-initialize-arguments',
+                    until: '3.0.0',
+                    url: 'http://emberjs.com/deprecations/v2.x/#toc_initializer-arity'
+                  });
+
         initializer.initialize(App.__registry__, App);
       } else {
         initializer.initialize(App);
@@ -766,6 +769,11 @@ var Application = Namespace.extend(RegistryProxy, {
     });
   },
 
+  /**
+    @private
+    @since 1.12.0
+    @method runInstanceInitializers
+  */
   runInstanceInitializers(instance) {
     this._runInitializer('instanceInitializers', function(name, initializer) {
       assert('No instance initializer named \'' + name + '\'', !!initializer);
@@ -897,15 +905,13 @@ var Application = Namespace.extend(RegistryProxy, {
   }
 });
 
-if (isEnabled('ember-registry-container-reform')) {
-  Object.defineProperty(Application.prototype, 'registry', {
-    configurable: true,
-    enumerable: false,
-    get() {
-      return buildFakeRegistryWithDeprecations(this, 'Application');
-    }
-  });
-}
+Object.defineProperty(Application.prototype, 'registry', {
+  configurable: true,
+  enumerable: false,
+  get() {
+    return buildFakeRegistryWithDeprecations(this, 'Application');
+  }
+});
 
 Application.reopenClass({
   /**

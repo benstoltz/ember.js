@@ -72,18 +72,6 @@ for a detailed explanation.
   Implements RFC https://github.com/emberjs/rfcs/pull/65, adding support for
   custom deprecation and warning handlers.
 
-* `ember-registry-container-reform`
-
-  Implements RFC https://github.com/emberjs/rfcs/pull/46, fully encapsulating
-  and privatizing the `Container` and `Registry` classes by exposing a select
-  subset of public methods on `Application` and `ApplicationInstance`.
-
-  `Application` initializers now receive a single argument to `initialize`:
-  `application`.
-
-  Likewise, `ApplicationInstance` initializers still receive a single argument
-  to initialize: `applicationInstance`.
-
 * `ember-routing-routable-components`
 
   Implements RFC https://github.com/emberjs/rfcs/pull/38, adding support for
@@ -92,3 +80,19 @@ for a detailed explanation.
 * `ember-metal-ember-assign`
 
   Add `Ember.assign` that is polyfill for `Object.assign`.
+
+* `ember-contextual-components`
+
+  Introduce a helper that creates closures over attrs and its own path, then
+  allow the closed over cell to be invoked via the `{{component` helper or
+  any reference with a dot in the path.
+
+  For example:
+
+  ```js
+  {{#with (hash profile=(component "user-profile")) as |userComponents|}}
+    {{userComponents.profile}}
+  {{/with}}
+  ```
+
+  Implements RFC [#64](https://github.com/emberjs/rfcs/blob/master/text/0064-contextual-component-lookup.md)

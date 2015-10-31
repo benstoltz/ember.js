@@ -101,13 +101,14 @@ if (isEnabled('ember-contextual-components')) {
     );
 
     let template = compile('{{component (component lookupComponent)}}');
-    component = Component.extend({ container, template }).create();
+    component = Component.extend({
+      container,
+      template,
+      lookupComponent: '-mandarin'
+    }).create();
 
     runAppend(component);
-    equal(component.$().text(), ``, 'undefined lookupComponent does not render');
-    run(() => {
-      component.set('lookupComponent', '-mandarin');
-    });
+
     equal(component.$().text(), `ni hao`,
           'mandarin lookupComponent renders greeting');
     run(() => {
@@ -308,5 +309,80 @@ if (isEnabled('ember-contextual-components')) {
 
     runAppend(component);
     equal(component.$().text(), 'Hodi Sergio', 'component is rendered');
+  });
+
+  QUnit.test('raises an assertion when component path is null', function() {
+    let template = compile(`{{component (component lookupComponent)}}`);
+    component = Component.extend({ container, template }).create();
+
+    expectAssertion(() => {
+      runAppend(component);
+    });
+  });
+
+  QUnit.test('raises an assertion when component path is not a component name', function() {
+    let template = compile(`{{component (component "not-a-component")}}`);
+    component = Component.extend({ container, template }).create();
+
+    expectAssertion(() => {
+      runAppend(component);
+    }, `The component helper cannot be used without a valid component name. You used "not-a-component" via (component "not-a-component")`);
+
+    template = compile(`{{component (component compName)}}`);
+    component = Component.extend({
+      container,
+      template,
+      compName: 'not-a-component'
+    }).create();
+
+    expectAssertion(() => {
+      runAppend(component);
+    }, `The component helper cannot be used without a valid component name. You used "not-a-component" via (component compName)`);
+  });
+
+  QUnit.test('renders with dot path', function() {
+    let expectedText = 'Hodi';
+    registry.register(
+      'template:components/-looked-up',
+      compile(expectedText)
+    );
+
+    let template = compile('{{#with (hash lookedup=(component "-looked-up")) as |object|}}{{object.lookedup}}{{/with}}');
+    component = Component.extend({ container, template }).create();
+
+    runAppend(component);
+    equal(component.$().text(), expectedText, '-looked-up component rendered');
+  });
+
+  QUnit.test('renders with dot path and attr', function() {
+    let expectedText = 'Hodi';
+    registry.register(
+      'template:components/-looked-up',
+      compile('{{expectedText}}')
+    );
+
+    let template = compile('{{#with (hash lookedup=(component "-looked-up")) as |object|}}{{object.lookedup expectedText=expectedText}}{{/with}}');
+    component = Component.extend({ container, template }).create({
+      expectedText
+    });
+
+    runAppend(component);
+    equal(component.$().text(), expectedText, '-looked-up component rendered');
+  });
+
+  QUnit.test('renders with dot path curried over attr', function() {
+    let expectedText = 'Hodi';
+    registry.register(
+      'template:components/-looked-up',
+      compile('{{expectedText}}')
+    );
+
+    let template = compile('{{#with (hash lookedup=(component "-looked-up" expectedText=expectedText)) as |object|}}{{object.lookedup}}{{/with}}');
+    component = Component.extend({ container, template }).create({
+      expectedText
+    });
+
+    runAppend(component);
+    equal(component.$().text(), expectedText, '-looked-up component rendered');
   });
 }

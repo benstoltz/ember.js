@@ -149,11 +149,32 @@ var Component = View.extend(TargetActionSupport, {
       deprecate(
         `Specifying \`defaultLayout\` to ${this} is deprecated. Please use \`layout\` instead.`,
         false,
-        { id: 'ember-views.component.defaultLayout', until: '3.0.0' }
+        {
+          id: 'ember-views.component.defaultLayout',
+          until: '3.0.0',
+          url: 'http://emberjs.com/deprecations/v2.x/#toc_ember-component-defaultlayout'
+        }
       );
 
       this.layout = this.defaultLayout;
     }
+
+    // If in a tagless component, assert that no event handlers are defined
+    assert(
+      `You can not define a function that handles DOM events in the \`${this}\` tagless component since it doesn't have any DOM element.`,
+      this.tagName !== '' || !(() => {
+        let eventDispatcher = this.container.lookup('event_dispatcher:main');
+        let events = (eventDispatcher && eventDispatcher._finalEvents) || {};
+
+        for (let key in events) {
+          let methodName = events[key];
+
+          if (typeof this[methodName]  === 'function') {
+            return true; // indicate that the assertion should be triggered
+          }
+        }
+      }
+    )());
   },
 
   template: null,
@@ -359,6 +380,7 @@ var Component = View.extend(TargetActionSupport, {
     @property hasBlock
     @param {String} [blockName="default"] The name of the block to check presence of.
     @returns Boolean
+    @since 1.13.0
   */
 
   /**
@@ -399,6 +421,7 @@ var Component = View.extend(TargetActionSupport, {
     @public
     @property hasBlockParams
     @returns Boolean
+    @since 1.13.0
   */
 
   /**
@@ -451,6 +474,7 @@ var Component = View.extend(TargetActionSupport, {
     @static
     @public
     @property positionalParams
+    @since 1.13.0
   */
 });
 

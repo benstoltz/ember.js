@@ -2,6 +2,8 @@
 /*globals global,__dirname*/
 
 var path = require('path');
+var QUnit = require('qunitjs');
+
 var distPath = path.join(__dirname, '../../../dist');
 var emberPath = path.join(distPath, 'ember.debug.cjs');
 var templateCompilerPath = path.join(distPath, 'ember-template-compiler');
@@ -100,6 +102,8 @@ module.exports = function(moduleName) {
       this.template = registerTemplate;
       this.component = registerComponent;
       this.controller = registerController;
+      this.route = registerRoute;
+      this.service = registerService;
       this.view = registerView;
       this.routes = registerRoutes;
       this.registry = {};
@@ -108,8 +112,6 @@ module.exports = function(moduleName) {
       // TODO: REMOVE ME
 
       // Patch DOMHelper
-      Ember.HTMLBars.DOMHelper.prototype.zomg = "ZOMG";
-
       Ember.HTMLBars.DOMHelper.prototype.protocolForURL = function(url) {
         var protocol = URL.parse(url).protocol;
         return (protocol == null) ? ':' : protocol;
@@ -216,6 +218,16 @@ function registerComponent(name, componentProps) {
 function registerController(name, controllerProps) {
   var controller = this.Ember.Controller.extend(controllerProps);
   this.register('controller:'+name, controller);
+}
+
+function registerRoute(name, routeProps) {
+  var route = this.Ember.Route.extend(routeProps);
+  this.register('route:'+name, route);
+}
+
+function registerService(name, serviceProps) {
+  var service = this.Ember.Object.extend(serviceProps);
+  this.register('service:'+name, service);
 }
 
 function registerView(name, viewProps) {

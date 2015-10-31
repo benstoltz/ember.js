@@ -79,6 +79,11 @@ export let missingOptionsIdDeprecation = 'When calling `Ember.deprecate` you mus
 export let missingOptionsUntilDeprecation = 'When calling `Ember.deprecate` you must provide `until` in options.';
 
 /**
+@module ember
+@submodule ember-debug
+*/
+
+/**
   Display a deprecation warning with the provided message and a stack trace
   (Chrome and Firefox only). Ember build tools will remove any calls to
   `Ember.deprecate()` when doing a production build.
@@ -92,6 +97,7 @@ export let missingOptionsUntilDeprecation = 'When calling `Ember.deprecate` you 
     `id` for this deprecation. The `id` can be used by Ember debugging tools
     to change the behavior (raise, log or silence) for that specific deprecation.
     The `id` should be namespaced by dots, e.g. "view.helper.select".
+  @for Ember
   @public
 */
 export default function deprecate(message, test, options) {
@@ -99,7 +105,11 @@ export default function deprecate(message, test, options) {
     deprecate(
       missingOptionsDeprecation,
       false,
-      { id: 'ember-debug.deprecate-options-missing', until: '3.0.0' }
+      {
+        id: 'ember-debug.deprecate-options-missing',
+        until: '3.0.0',
+        url: 'http://emberjs.com/deprecations/v2.x/#toc_ember-debug-function-options'
+      }
     );
   }
 
@@ -107,7 +117,11 @@ export default function deprecate(message, test, options) {
     deprecate(
       missingOptionsIdDeprecation,
       false,
-      { id: 'ember-debug.deprecate-id-missing', until: '3.0.0' }
+      {
+        id: 'ember-debug.deprecate-id-missing',
+        until: '3.0.0',
+        url: 'http://emberjs.com/deprecations/v2.x/#toc_ember-debug-function-options'
+      }
     );
   }
 
@@ -115,7 +129,11 @@ export default function deprecate(message, test, options) {
     deprecate(
       missingOptionsUntilDeprecation,
       options && options.until,
-      { id: 'ember-debug.deprecate-until-missing', until: '3.0.0' }
+      {
+        id: 'ember-debug.deprecate-until-missing',
+        until: '3.0.0',
+        url: 'http://emberjs.com/deprecations/v2.x/#toc_ember-debug-function-options'
+      }
     );
   }
 
