@@ -5,7 +5,7 @@
 
 import { assert } from 'ember-metal/debug';
 import isNone from 'ember-metal/is_none';
-import { symbol } from 'ember-metal/utils';
+import symbol from 'ember-metal/symbol';
 import BasicStream from 'ember-metal/streams/stream';
 import { read } from 'ember-metal/streams/utils';
 import { labelForSubexpr } from 'ember-htmlbars/hooks/subexpr';
@@ -64,7 +64,7 @@ function createClosureComponentCell(env, originalComponentPath, params, hash, la
 }
 
 function isValidComponentPath(env, path) {
-  const result = lookupComponent(env.container, path);
+  let result = lookupComponent(env.owner, path);
 
   return !!(result.component || result.layout);
 }
@@ -81,14 +81,14 @@ function createNestedClosureComponentCell(componentCell, params, hash) {
 
   return {
     [COMPONENT_PATH]: componentCell[COMPONENT_PATH],
-    [COMPONENT_HASH]: mergeHash(componentCell[COMPONENT_HASH], hash),
+    [COMPONENT_HASH]: mergeInNewHash(componentCell[COMPONENT_HASH], hash),
     [COMPONENT_POSITIONAL_PARAMS]: positionalParams,
     [COMPONENT_CELL]: true
   };
 }
 
 function createNewClosureComponentCell(env, componentPath, params, hash) {
-  let positionalParams = getPositionalParams(env.container, componentPath);
+  let positionalParams = getPositionalParams(env.owner, componentPath);
 
   // This needs to be done in each nesting level to avoid raising assertions
   processPositionalParams(null, positionalParams, params, hash);
@@ -117,6 +117,6 @@ function getPositionalParams(container, componentPath) {
   }
 }
 
-export function mergeHash(original, updates) {
-  return assign(original, updates);
+export function mergeInNewHash(original, updates) {
+  return assign({}, original, updates);
 }
